@@ -48,5 +48,6 @@ void clrscr(console *con);
 void init_video(void);
 void set_attrib(console *con, unsigned att);
 void select_vc(unsigned which_vc);
+void move_cursor(unsigned int x, unsigned int y);
 
 #endif

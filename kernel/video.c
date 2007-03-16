@@ -36,7 +36,6 @@ static console *_curr_vc;
 static unsigned short *_vga_fb_adr = (void *)0;
 static unsigned _crtc_io_adr, _vc_width, _vc_height;
 
-
 void blink(void)
 {
 	(*(unsigned char *)_vga_fb_adr)++;
@@ -50,6 +49,12 @@ void resetCursor(void)
 	moveCSR();
 }
 */
+void move_cursor(unsigned int x, unsigned int y)
+{
+	_curr_vc->csr_x = x;
+	_curr_vc->csr_y = y;
+	move_csr();
+}
 
 void scroll(console *con)
 {

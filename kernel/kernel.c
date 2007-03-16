@@ -43,12 +43,11 @@ unsigned int *pointer;
 void _kernel_main(void *bootParam)
 {
 	unsigned int i;
-
-	init_phys_mem(bootParam);
+	
 	thisSystem = bootParam;
+	init_phys_mem(thisSystem);
 
 	init_video();
-
 	//clrscr();
 	/*kprintf("kernel called with eax=%p\n", bootParam);
 	kprintf("*bootParam=0x%p\n", thisSystem, thisSystem);
@@ -58,7 +57,6 @@ void _kernel_main(void *bootParam)
 	kprintf("kernelSize=%d\n", thisSystem->kernelSize);
 	kprintf("*cpuInfo=0x%p\n", thisSystem->cpuInfo);
 	kprintf("*memoryInfo=0x%p\n", thisSystem->memoryInfo);*/
-
 	//displayCPUInfo(thisSystem->cpuInfo);
 
 	// Initialize PICs
@@ -70,10 +68,11 @@ void _kernel_main(void *bootParam)
 	init_timer();
 	init_keyboard();
 	
+	kprintf("\tvirtual memory...\n");
 	init_virt_mem();
-
 	print_mem_info();
-	//init_multitasker();
+	
+	init_multitasker();
 	spawn_threads();
 	//init_tasks();
 	
@@ -83,7 +82,6 @@ void _kernel_main(void *bootParam)
 		//kprintf("0x%p %d\t", &pointer[i], i);
 		pointer[i]=0;
 	}
-		
 	kprintf("wrote to buffer successfully\n");
 	//while(1);
 	
@@ -97,18 +95,17 @@ void _kernel_main(void *bootParam)
 	kprintf("Reprogramming timer and enabling IRQs...\nshell:~# ");
 
 	reprogram_timer(10);
-	//enable_irq(0);
+	enable_irq(0);
 	enable_irq(1);
 	sti();
 	
-	//__asm__ __volatile("int $0x80");
-	
-	//toggle_interrupts(false);
-	//schedule();
+	//kill_thread();
 	while(1) {
-		//kprintf("\nmalloc(10000) = 0x%p\n", kmalloc(0x10000));
-		//for(i=0;i<1000000;i++);
-		//__asm__ __volatile("int $0x80");
+			//kprintf("!");
 	}
+	
+	//kprintf("\nmalloc(10000) = 0x%p\n", kmalloc(0x10000));
+	//__asm__ __volatile("int $0x80");
+
 	kprintf("kernel panic: exceution continuing beyond _kernel_main address space!");
 }

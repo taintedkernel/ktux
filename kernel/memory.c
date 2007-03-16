@@ -258,7 +258,7 @@ void init_virt_mem()
 	setPDEaddr(kernelPageDirectory, V_KERNEL_PAGE_TABLE_1, (unsigned int)kernelPageDirectory, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 
 /// check it
-	int i;
+/*	int i;
 	unsigned int *tmp;
 	tmp = (unsigned int *)virt2Map(KERNEL_VIRT_ADDR);
 	for (i=0; i<10; i++)
@@ -268,7 +268,7 @@ void init_virt_mem()
 	tmp = (unsigned int *)virt2Map(V_KERNEL_HEAP_ADDR);
 	for (i=0; i<10; i++)
 	kprintf("h:0x%p ", tmp[i]);	
-	kprintf("\n");
+	kprintf("\n");*/
 	
 	/*kernelMappedTables = (unsigned int *) P_MAPPED_PTABLE_1;
 	set_mapped_table_entry(0);
@@ -276,7 +276,7 @@ void init_virt_mem()
 	set_mapped_table_entry(V_KERNEL_HEAP_ADDR);*/
 }	
 
-void page_fault_handler(unsigned int address, unsigned int eip)
+void page_fault_handler(unsigned int address, unsigned int errorCode, unsigned int eip)
 {
 	unsigned int pageDir, *pageTable;
 	
@@ -284,14 +284,20 @@ void page_fault_handler(unsigned int address, unsigned int eip)
 	pageTable = (unsigned int *)(pageDir & PDE_ADDR_MASK);
 	
 	kprintf("page fault: address=%p referenced at kernel EIP 0x%p\n", address, eip);
-	kprintf("kernel page directory entry=0x%p\n", pageDir);
-	kprintf("kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
+	kprintf("  kernel page directory entry=0x%p\n", pageDir);
+	kprintf("  kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
 	
+	if (errorCode & PDE_FLAG_PRESENT)
+	{
+		kprintf("  fault caused by page-level protection violation.  kill thread not implemented, halting\n");
+		while(1);
+	}
+		
 	if (address < KERNEL_VIRT_ADDR) {
-		kprintf("address below kernel\n");
+		kprintf("  address below kernel\n");
 	}
 	else if (address < V_KERNEL_HEAP_ADDR) {
-		kprintf("address in kernel space!\n");
+		kprintf("  address in kernel space!\n");
 	}
 	else if (address < V_KERNEL_DRIVER_HEAP) {
 		// Is request valid?  Must be below end of heap.
@@ -299,15 +305,15 @@ void page_fault_handler(unsigned int address, unsigned int eip)
 			//kprintf("write code to allocate and map new page here\n");
 			setPTEaddr(pageTable, address, alloc_page(), (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 			
-			kprintf("updated: kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
+			kprintf("  updated: kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
 			return;
 		}
 		else {
-			kprintf("heap request invalid.  kill thread.\n");
+			kprintf("  heap request invalid.  kill thread.\n");
 			//KILL_THREAD
 		}
 	}
-		
+	
 /*	if ((V_KERNEL_PAGE_TABLE_1 <= address) && (address < V_KERNEL_PAGE_TABLE_TABLE))
 	{
 	}*/
@@ -372,7 +378,7 @@ void *sbrk(unsigned int nbytes)
 
 	kprintf("sbrk(nbytes=0x%p), 0x%p avail before page boundry (vKernelHeap=0x%p)\n", nbytes, free, vKernelHeap);
 
-/*	// TEST THROUGHLY
+	// TEST THROUGHLY
 	if (free < nbytes) {
 		i = 0;
 		while (free < nbytes) {
@@ -380,12 +386,12 @@ void *sbrk(unsigned int nbytes)
 			tmpVirt = (vKernelHeap & ~(PAGE_SIZE-1)) + PAGE_SIZE*(i++);
 			
 			//kprintf("calling map_kpage(0x%p, 0x%p)\n", tmpVirt, tmpPage);
-			//map_page_helper(kernelPageDirectory, tmpVirt, tmpPage, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
+			map_page_helper(kernelPageDirectory, tmpVirt, tmpPage, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 			
 			free += PAGE_SIZE;
 			
 		}
-	}*/
+	}
 	
 	p = (void *)vKernelHeap;
 	vKernelHeap += nbytes;

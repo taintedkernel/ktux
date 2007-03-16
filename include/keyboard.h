@@ -108,5 +108,6 @@ int init_keyboard(void);
 void write_kbd(unsigned adr, unsigned char data);
 unsigned convert(unsigned key, unsigned short kbd_status);
 void kbd_irq_handler(void);
+void process_kbd(unsigned char keycode);
 
 #endif

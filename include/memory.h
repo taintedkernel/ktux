@@ -148,7 +148,7 @@ typedef volatile struct
 void print_mem_info(void);
 void init_phys_mem(systemInfo*);
 void init_virt_mem(void);
-void page_fault_handler(unsigned int, unsigned int);
+void page_fault_handler(unsigned int, unsigned int, unsigned int);
 
 // virtual memory management
 void *kmalloc(unsigned int nbytes);

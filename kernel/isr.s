@@ -62,7 +62,6 @@
 	
 	; Other handlers
 	GLOBAL syscallHandler
-	GLOBAL x86GeneralExceptionHandler
 
 	; External C interrupt handlers
 	EXTERN exception_handler
@@ -194,6 +193,7 @@ mainIsrStub:
 
 ; ********** PAGE FAULT HANDLER **********
 x86PageFault:
+	cli
 	MACRO_REGS_SAVE
 	
 	; Push pointer to register stack struct
@@ -208,6 +208,10 @@ x86PageFault:
 	mov	eax, [esp+52]
 	push	eax
 	
+	; Push pointer to page fault error code
+	mov eax, [esp+52]
+	push	eax
+	
 	; Push pointer to offending address
 	mov	eax, cr2
 	push	eax
@@ -215,6 +219,7 @@ x86PageFault:
 	call	page_fault_handler
 	pop	eax
 	pop eax
+	pop	eax
 	
 	mov	ebx, [esp+48]
 	mov	eax, [esp+52]
@@ -224,6 +229,7 @@ x86PageFault:
 	mov	[esp+56], ebx
 	
 	MACRO_REGS_RESTORE
+	sti
 	iret
 
 ; ********** IRQ HANDLERS **********
@@ -231,7 +237,7 @@ x86PageFault:
 x86InterruptHandler20:
 	;push	dword 0x20
 	;jmp	mainIsrStub
-
+	cli
 	MACRO_REGS_SAVE
 
 	; Copy user regs to process regs struct
@@ -254,16 +260,16 @@ x86InterruptHandler20:
 	;mov	[tss_esp0], ebx
 
 	MACRO_REGS_RESTORE
+	sti
 	iret
 	
 ; IRQ 1 - Keyboard
 x86InterruptHandler21:
+	cli
 	MACRO_REGS_SAVE
 	call	kbd_irq_handler
 	MACRO_REGS_RESTORE
-	iret
-
-x86GeneralExceptionHandler:
+	sti
 	iret
 
 ; Handles our OS/system calls

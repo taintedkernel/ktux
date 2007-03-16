@@ -26,14 +26,16 @@
 #include <selectors.h>
 #include <string.h>			// memsetw
 #include <stdio.h>
+#include <video.h>			// putch()
 
 extern unsigned int tss;
 //extern void *pageBuffer;
 
-unsigned int nextPID=1;
-unsigned int currentTask=1;
-unsigned int numTasks=1;
-unsigned int threads[MAX_THREADS];
+//unsigned int nextPID;
+unsigned int idlePID;
+unsigned int currentTask;
+unsigned int numTasks;
+process_struct *threads[MAX_THREADS];
 tss_struct systemTSS;
 process_struct *process;
 pmode_task_struct *pmodeTask;
@@ -43,14 +45,55 @@ void test()
 	static int i=0;
 	
 	while (1) {
-		kprintf("test\n");
+		kprintf("test");
 		for(i=0;i<1000;i++);
+	}
+}
+
+void one()
+{
+	static int i=0;
+	
+	while (1) {
+		if (i % 25) {
+			move_cursor(1, 1);
+			kprintf("%d", i);
+		}
+		i++;
+		if (i%1000) i=0;
+	}
+}
+
+void two()
+{
+	static int i=0;
+	
+	while (1) {
+		if (i % 25) {
+			move_cursor(40, 1);
+			kprintf("%d", i);
+		}
+		i++;
+		if (i%1000) i=0;
+	}
+}
+
+void idle()
+{
+	static int i=0;
+	
+	while (1) {
+		kprintf("idle");
 	}
 }
 
 void init_multitasker()
 {
-	currentTask = 1;
+	numTasks = 0;
+	currentTask = 0;
+	idlePID = create_kernel_thread("idle", (unsigned int)&idle, KERNEL_DATA_SELECTOR, 0x0202, 0);	
+
+	kprintf("idle() PID=%d\n", idlePID);
 
 /*	lea	eax, [tss]
 	mov	ebx, 0x0528				; GDTbase (500) + TSS selector (28)
@@ -77,15 +120,20 @@ void init_multitasker()
 	*/
 }
 
+void kill_thread()
+{
+	task_switch(0);
+}
+
 unsigned int task_switch(unsigned int oldESP)
 {
-	unsigned int foundTask;
-	
-	if (numTasks == 1)
-		return oldESP;
+	static unsigned int foundTask;
 
-	process = (process_struct *)threads[currentTask];
-	process->ustack = oldESP;
+	// save current process stack, then load new task
+	//if (oldESP > 0) {
+		process = threads[currentTask];
+		process->ustack = oldESP;
+	//}
 	
 	foundTask = 0;
 	while (!foundTask) {
@@ -93,18 +141,24 @@ unsigned int task_switch(unsigned int oldESP)
 		if (threads[currentTask] != 0)
 		{
 			foundTask = 1;
-			process = (process_struct *)threads[currentTask];
+			process = threads[currentTask];
 			systemTSS.esp0 = process->kstack;
+			putch('.');
 			return process->ustack;
 		}
 	}
 
-	return oldESP;
+	
+	/*kprintf("fatal error!\n");
+		while(1);*/
+
+	return 0;
 }
 
 void spawn_threads(void)
 {
-	create_kernel_thread("test", (unsigned int)&test, KERNEL_DATA_SELECTOR, 0x0202, 0);
+	kprintf("spawning threads...\ncreating thread 'one', returned=%d\n", create_kernel_thread("one", (unsigned int)&one, KERNEL_DATA_SELECTOR, 0x0202, 0));
+	kprintf("creating thread 'two', returned=%d\n", create_kernel_thread("two", (unsigned int)&two, KERNEL_DATA_SELECTOR, 0x0202, 0));
 }
 
 unsigned int get_next_pid(void)
@@ -131,10 +185,11 @@ unsigned int create_kernel_thread(char *name, unsigned int entry, unsigned int d
 	//unsigned int *stack;
 
 	//kprintf("in create_kernel_thread()\n");
-	
 	cli();
-	i = 1;
-	while(threads[i] != 0 && i < MAX_THREADS) i++;
+
+	// find unallocated entry in thread array
+	i = 0;
+	while((unsigned int)threads[i] != 0 && i < MAX_THREADS) i++;
 	if (i == MAX_THREADS) return -1;
 
 	//kprintf("found i=%d\n", i);
@@ -142,18 +197,17 @@ unsigned int create_kernel_thread(char *name, unsigned int entry, unsigned int d
 	numTasks++;
 	process = (process_struct *)kmalloc(sizeof(process_struct));
 
-	kprintf("allocd' process struct=0x%p\n", process);
+	kprintf("creating thread '%s', allocd' process struct=0x%p\n", name, process);
 
-	threads[i] = (unsigned int)process;
+	threads[i] = process;
 	
 	//kprintf("marked process address\n");
 
-	/*
-	memsetw(&process, 0, sizeof(process_struct));
+	//memcpy(&process->name, name, strlen(name));
+	
+	/*memsetw(&process, 0, sizeof(process_struct));
 	memsetw(&process->stack, 0, sizeof(process->stack));
-	memsetw(&process->p10_stack, 0, sizeof(process->p10_stack));
-	memcpy(&process->name, name, strlen(name));
-	*/
+	memsetw(&process->p10_stack, 0, sizeof(process->p10_stack));*/
 	
 	//kprintf("finished memset and memcpy\n", i);
 

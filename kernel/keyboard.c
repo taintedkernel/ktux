@@ -72,21 +72,28 @@ int init_keyboard(void)
 
 void kbd_irq_handler(void)
 {
-	static unsigned int i, keycode;
-	static unsigned short kbd_status, saw_break_code;
-	static unsigned short temp;
+	static unsigned char keycode;
 
-/* get scancode from port 0x60 */
+// get scancode from port 0x60 
 	keycode = inportb(0x60);
 	keyboardBuffer[kbdBufPos++ % KBD_BUF_SIZE] = keycode;
 
-/* check for break keycode (i.e. a keycode is released) */
+	process_kbd(keycode);
+}
+
+void process_kbd(unsigned char keycode)
+{
+	static unsigned int i;
+	static unsigned short kbd_status, saw_break_code;
+	static unsigned short temp;	
+	
+// check for break keycode (i.e. a keycode is released) 
 	if(keycode >= 0x80)
 	{
 		saw_break_code = 1;
 		keycode &= 0x7F;
 	}
-/* the only break codes we're interested in are Shift, Ctrl, Alt */
+// the only break codes we're interested in are Shift, Ctrl, Alt 
 	if(saw_break_code)
 	{
 		if(keycode == RAW1_LEFT_ALT || keycode == RAW1_RIGHT_ALT)
@@ -98,7 +105,7 @@ void kbd_irq_handler(void)
 		saw_break_code = 0;
 		return;
 	}
-/* it's a make keycode: check the "meta" keycodes, as above */
+// it's a make keycode: check the "meta" keycodes, as above 
 	if(keycode == RAW1_LEFT_ALT || keycode == RAW1_RIGHT_ALT)
 	{
 		kbd_status |= KBD_META_ALT;
@@ -114,8 +121,8 @@ void kbd_irq_handler(void)
 		kbd_status |= KBD_META_SHIFT;
 		return;
 	}
-/* Scroll Lock, Num Lock, and Caps Lock set the LEDs. These keycodes
-have on-off (toggle or XOR) action, instead of momentary action */
+// Scroll Lock, Num Lock, and Caps Lock set the LEDs. These keycodes
+// have on-off (toggle or XOR) action, instead of momentary action 
 	if(keycode == RAW1_SCROLL_LOCK)
 	{
 		kbd_status ^= KBD_META_SCRL;
@@ -129,7 +136,7 @@ have on-off (toggle or XOR) action, instead of momentary action */
 	if(keycode == RAW1_CAPS_LOCK)
 	{
 		kbd_status ^= KBD_META_CAPS;
-LEDS:		write_kbd(0x60, 0xED);	/* "set LEDs" command */
+LEDS:		write_kbd(0x60, 0xED);	// "set LEDs" command 
 		temp = 0;
 		if(kbd_status & KBD_META_SCRL)
 			temp |= 1;
@@ -137,11 +144,11 @@ LEDS:		write_kbd(0x60, 0xED);	/* "set LEDs" command */
 			temp |= 2;
 		if(kbd_status & KBD_META_CAPS)
 			temp |= 4;
-		write_kbd(0x60, temp);	/* bottom 3 bits set LEDs */
+		write_kbd(0x60, temp);	// bottom 3 bits set LEDs 
 		return;
 	}
 
-/* if it's F1, F2 etc. switch to the appropriate virtual console */
+// if it's F1, F2 etc. switch to the appropriate virtual console 
 	if (keycode >= RAW1_F1 && keycode <= RAW1_F10 && (kbd_status & KBD_META_ALT) && (kbd_status & KBD_META_CTRL))
 	{
 		switch(keycode)
@@ -194,7 +201,7 @@ LEDS:		write_kbd(0x60, 0xED);	/* "set LEDs" command */
 	}
 
 	// NO PRINTF IN INTERRUPT HANDLERS - NON RE-ENTRANT! //
-	//kprintf("IRQ1 handled, keycode=%04X, char='%c'\n", keycode, convert(keycode));
+	//kprintf("IRQ1 handled, keycode=%04X, char='%c'\n", keycode, convert(keycode));	
 }
 
 void write_kbd(unsigned adr, unsigned char data)
