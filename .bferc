@@ -1,0 +1,12 @@
+
+{ HISTORY 200 }
+{ STACK 16 4 }
+{ TABS 0 }
+{ RELOAD 1 1 }
+{ STRUCT hardware 0x9860
+	bootdrive 2
+	bootFS 2
+	fatPointer 4
+	cpuInfoPointer 4
+	e820Pointer 4
+}

@@ -1,0 +1,25 @@
+map_page_helper(pageDir=0x4000, virt=0xd03fa000, phys=0x1c03000, flags=0x3)
+        pdIndex=0x340, pageDirEntry=0x7023, pageTable=0x7000
+map_page_helper(pageDir=0x4000, virt=0xd03fb000, phys=0x1c02000, flags=0x3)
+        pdIndex=0x340, pageDirEntry=0x7023, pageTable=0x7000
+map_page_helper(pageDir=0x4000, virt=0xd03fc000, phys=0x1c01000, flags=0x3)
+        pdIndex=0x340, pageDirEntry=0x7023, pageTable=0x7000
+map_page_helper(pageDir=0x4000, virt=0xd03fd000, phys=0x1c00000, flags=0x3)
+        pdIndex=0x340, pageDirEntry=0x7023, pageTable=0x7000
+map_page_helper(pageDir=0x4000, virt=0xd03fe000, phys=0x1bff000, flags=0x3)
+        pdIndex=0x340, pageDirEntry=0x7023, pageTable=0x7000
+map_page_helper(pageDir=0x4000, virt=0xd03ff000, phys=0x1bfe000, flags=0x3)
+        pdIndex=0x340, pageDirEntry=0x7023, pageTable=0x7000
+map_page_helper(pageDir=0x4000, virt=0xd0400000, phys=0x1bfd000, flags=0x3)
+        pdIndex=0x341, pageDirEntry=0x2, pageTable=0x0
+alloc new pageTable at 0x1bfc000 for virt 0xd0400000
+virt2PageTable(0xd0400000)=0xf0341000
+returning with 0xf0341000
+created new table @ 0xf0341000 for virt 0xd0400000
+new pageDirEntry=0x1bfc003
+map_page_helper(pageDir=0x4000, virt=0xd0400000, phys=0x1bfd000, flags=0x3)
+        pdIndex=0x341, pageDirEntry=0x1bfc003, pageTable=0x1bfc000
+page fault: address=1bfc000 referenced at EIP 0xc000118f
+page directory entry=0x2
+page table entry=0x0
+

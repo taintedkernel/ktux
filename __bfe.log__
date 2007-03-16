@@ -1,0 +1,246 @@
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: NEXT...
+000FE05D  F000:0000E05D  [e60d]  out 0x0d, al
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: NEXT...
+000FE05D  F000:0000E05D  [e60d]  out 0x0d, al
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: NEXT...
+000FE05D  F000:0000E05D  [e60d]  out 0x0d, al
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+00100686  0018:C0000686  [cf]  iretd
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+0010064D  0018:C000064D  [60]  pushad
+: Stopped on a breakpoint
+: GO...
+00100686  0018:C0000686  [cf]  iretd
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+0010064D  0018:C000064D  [60]  pushad
+: Stopped on a breakpoint
+: GO...
+0010066A  0018:C000066A  [e8a1080000]  call .+0x000008a1 (0xc0000f10)
+: Stopped on a breakpoint
+: NEXT...
+0010066F  0018:C000066F  [58]  pop eax
+00100670  0018:C0000670  [58]  pop eax
+00100671  0018:C0000671  [b020]  mov al, 0x20
+: GO...
+00100686  0018:C0000686  [cf]  iretd
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+0010064D  0018:C000064D  [60]  pushad
+: Stopped on a breakpoint
+: GO...
+0010066A  0018:C000066A  [e8c1080000]  call .+0x000008c1 (0xc0000f30)
+: Stopped on a breakpoint
+: GO...
+0010064D  0018:C000064D  [60]  pushad
+: Stopped on a breakpoint
+: GO...
+0010066A  0018:C000066A  [e8c1080000]  call .+0x000008c1 (0xc0000f30)
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+00100686  0018:C0000686  [0f20d0]  mov eax, cr2
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: GO...
+00100686  0018:C0000686  [0f20d0]  mov eax, cr2
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+00100686  0018:C0000686  [0f20d0]  mov eax, cr2
+: Stopped on a breakpoint
+: GO...
+: Terminating Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+00100686  0018:C0000686  [0f20d0]  mov eax, cr2
+: Stopped on a breakpoint
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+: Lost connection to Bochs
+: Starting Bochs
+000FE05B  F000:0000E05B  [31c0]  xor ax, ax
+: GO...
+00100686  0018:C0000686  [0f20d0]  mov eax, cr2
+: 

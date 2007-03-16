@@ -1,0 +1,41 @@
+
+Variable: Kernel Disk Image Hack [KERNEL_SECTOR_START]
+Default: 100
+Referenced:
+Makefile
+osloader/kloader.h
+osloader/Makefile
+
+Variable: Bootstub Start Address
+Default: 0x8000
+Referenced:
+osloader/Makefile
+osloader/kloader.h
+
+Variable: Kernel Start Address (Physical)
+Default: 0x100000
+Referenced:
+include/kernelSize.h
+include/memory.h
+kernel/kernel.ld
+osloader/kloader.h
+osloader/loader.ld
+
+Variable: Kernel Start Address (Virtual)
+Default: 0xC0000000
+Referenced:
+include/memory.h
+kernel/kernel.ld
+osloader/kloader.h
+osloader/loader.ld
+
+Variable: Kernel Stack
+Default: 0x3000
+
+Variable: Kernel Segments (Code & Data)
+Defaults:
+	Code: 0x8 (before paging enabled), 0x18 after
+	Data: 0x10 (before paging enabled), 0x20 after
+Referenced:
+include/interrupts.h
+osloader/klMain.s

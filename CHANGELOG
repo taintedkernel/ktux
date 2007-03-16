@@ -1,0 +1,56 @@
+2006-05-10
+
+Added basic memory manager and enabled paging support
+
+ktux-snapshot-2007-02-11.tar.bz2:
+
+Bootsector initially hardcoded to load bootstub from static sector on 
+disk.  Added FAT support to load file from partition.  Need to update 
+bootstub to reflect changes and additional code.
+
+ktux-snapshot-2007-02-16.tar.bz2:
+
+First alpha rewrite with FAT12 support.  Kernel and bootstub no longer 
+hard-coded to specific sectors.
+
+ktux-snapshot-2007-02-19.tar.bz2:
+
+Fixed compile-time bugs on previous snapshot.  Modified makefiles for 
+use with new FAT-dependent code, use new virtual floppy driver on
+Windows/Cygwin.  Discovered new run-time bug: Cannot locate kernel
+file on boot.
+
+ktux-snapshot-2007-02-20.tar.bz2:
+
+Resolved run-time bugs relating to new FAT code.  Ktux now loads 
+kernel and jumps to kernel mode successfully.  Updated makefiles to 
+remove old hard-coded bootstub and kernel size code.  Next to debug: 
+init_virt_mem(), interrupt gate descriptor not valid system segment.
+
+ktux-snapshot-2007-03-01.tar.bz2:
+
+Added kernel ELF support in bootstub.  Now loads i386-executable ELF 
+images into memory and prepares for execution.  Bugfix: Also calculates 
+kernel size correctly from ELF headers.  Next to fix: parseELFHeader() 
+assembly routine in klLoadKernel.s hangs.
+
+ktux-snapshot-2007-03-01-build2.tar.bz2:
+
+parseELFHeader() bug resolved.  Fixed stack issues, modified return 
+value as 4-byte integer instead of 2.  Changed kernel code to get end of 
+kernel image space directly from hardware struct instead of calculating 
+it as a size.
+
+Ktux now boots into kernel mode, allocates page directories & tables, 
+enables paging, allocates a dynamic heap, gets to a page fault and 
+suspends execution.  Back again to previous roadblock.
+
+ktux-snapshot-2007-03-05.tar.bz2:
+
+kmalloc() null pointer return value bug resolved.  Initial support 
+for mapping page tables to reserved linear address region.
+
+Need to add functionality to handle page faults instead of just 
+reporting and suspending execution.
+
+
