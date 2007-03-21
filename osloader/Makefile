@@ -31,7 +31,7 @@ OBJDUMP		= ${BINUTILS}/i686-elf-objdump
 OBJCOPY		= ${BINUTILS}/i686-elf-objcopy
 NM		= ${BINUTILS}/i686-elf-nm
 LINKOPTS	= -m486 -Wl,-warn-common,-X,--oformat,elf32-i386,-e,kloaderMain,-Ttext,0x00008000
-BOOTSTUBOBJS	= klMain.o klConsoleIO.o klLoadKernel.o klDetectHardware.o
+BOOTSTUBOBJS	= klMain.o klConsoleIO.o klLoadKernel.o klHardware.o
 HEADERS		= $(INCDIR)/interrupts.h $(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/ktux.h $(INCDIR)/stdio.h \
 #			$(INCDIR)/vga.h $(INCDIR)/video.h $(INCDIR)/keyboard.h $(INCDIR)/timer.h $(INCDIR)/pic.h
 
