@@ -1,0 +1,6 @@
+Known bugs and/or outstanding items in Ktux
+===========================================
+
+Multitasking
+------------
+-Unhandled exceptions fire if return key held down
