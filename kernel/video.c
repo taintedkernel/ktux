@@ -27,6 +27,7 @@
 #include <vga.h>			// VGA_MISC_READ
 #include <video.h>			// this source
 #include <ctype.h>			// isdigit
+#include <sh.h>
 
 
 console _vc[MAX_VC];
@@ -119,6 +120,18 @@ void move_csr(void)
 }
 /*****************************************************************************
 *****************************************************************************/
+unsigned short get_csr_x(void)
+{
+	return _curr_vc->csr_x;
+}
+/*****************************************************************************
+*****************************************************************************/
+unsigned short get_csr_y(void)
+{
+	return _curr_vc->csr_y;
+}
+/*****************************************************************************
+*****************************************************************************/
 void select_vc(unsigned which_vc)
 {
 	unsigned i;
@@ -131,7 +144,6 @@ void select_vc(unsigned which_vc)
 	outportb(_crtc_io_adr + 1, i >> 8);
 	outportb(_crtc_io_adr + 0, 13);
 	outportb(_crtc_io_adr + 1, i);
-/* oops, forgot this: */
 	move_csr();
 }
 /*****************************************************************************
@@ -160,6 +172,7 @@ ESC */
 	{
 		if(isdigit(c))
 		{
+			//asm volatile("xchg %bx, %bx");
 			con->esc1 = con->esc1 * 10 + c - '0';
 			return;
 		}
@@ -246,11 +259,24 @@ ESC */
 	if(c == 0x08)
 	{
 		if(con->csr_x != 0)
-			con->csr_x--;
+		{
+			unsigned short *where;
+
+			where = fb_adr + (con->csr_y * _vc_width + --con->csr_x);
+			*where = (' ' | att);
+		}
 	}
 /* tab */
-	else if(c == 0x09)
-		con->csr_x = (con->csr_x + 8) & ~(8 - 1);
+	else if(c == 0x09) {
+		unsigned short *where, eot;
+
+		eot=(con->csr_x + 8) & ~(8 - 1);
+		while (con->csr_x != eot) {
+			where = fb_adr + (con->csr_y * _vc_width + con->csr_x);
+			*where = (' ' | att);
+			con->csr_x++;
+		}
+	}
 /* carriage return */
 	else if(c == '\r')	/* 0x0D */
 		con->csr_x = 0;
@@ -281,7 +307,10 @@ ESC */
 /* move cursor only if the VC we're writing is the current VC */
 	if(_curr_vc == con)
 		move_csr();
+
+	//if(c == '\n') shell_prompt();
 }
+
 /*****************************************************************************
 *****************************************************************************/
 void putch(unsigned c)
@@ -294,7 +323,7 @@ void putch(unsigned c)
 
 void clrscr(console *con)
 {
-	unsigned char *vidmem = ((unsigned char *)_vga_fb_adr);	
+	unsigned char *vidmem = ((unsigned char *)_vga_fb_adr);
 	static unsigned short i;
 
 	for(i=0; i<_vc_width*_vc_height; i++) {
@@ -307,7 +336,7 @@ void clrscr(console *con)
 	move_csr();
 }
 
-void init_video(void)
+void init_console(void)
 {
 	unsigned short i;
 
@@ -322,6 +351,7 @@ void init_video(void)
 		_vga_fb_adr = (unsigned short *)0xB0000L;
 		_crtc_io_adr = 0x3B4;
 	}
+
 /* read current screen size from BIOS data segment (addresses 400-4FF) */
 	_vc_width = *(unsigned short *)0x44A;
 	_vc_height = *(unsigned char *)0x484 + 1;
@@ -335,14 +365,20 @@ Use INTEGER division to round down. */
 	{
 		_curr_vc = _vc + i;
 		_curr_vc->attrib = i + 1;
+		//set_attrib(_curr_vc, 33);
 		_curr_vc->fb_adr = _vga_fb_adr +
 			_vc_width * _vc_height * i;
 /* ESC[2J clears the screen */
-		kprintf("\x1B[2J  this is VC#%u (of 0-%u)\n",
-			i, _num_vcs - 1);
+		if (i > 0)
+			kprintf("\x1B[2Jktux console %u\n\n", i, _num_vcs - 1);
 	}
 	select_vc(0);
-	kprintf("init_video: %s emulation, %u x %u, framebuffer at "
+}
+
+
+void print_video_info(void)
+{
+	kprintf("%s emulation, %u x %u, framebuffer at "
 		"0x%lX\n", (_crtc_io_adr == 0x3D4) ? "color" : "mono",
 		_vc_width, _vc_height, _vga_fb_adr);
 }

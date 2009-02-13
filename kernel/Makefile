@@ -21,28 +21,30 @@
 # Makefile for Ktux kernel
 
 STDDEPEND	= Makefile
-BINUTILS	= /usr/cross/bin
 INCDIR		= ../include
+
 LDSCRIPT	= kernel.ld
-AS		= /usr/bin/nasm
-CC		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -I$(INCDIR)
-CC_DEP		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -MM -I$(INCDIR)
-LD		= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
+AS			= /usr/bin/nasm
+
+BINUTILS	= /usr/cross/bin
+CC			= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O1 -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
+CC_DEP		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O1 -nostdinc -fno-builtin -MM -I$(INCDIR) #-fwritable-strings
+LD			= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
 OBJDUMP		= ${BINUTILS}/i686-elf-objdump
-#OBJCOPY		= ${BINUTILS}/i686-elf-objcopy
-NM		= ${BINUTILS}/i686-elf-nm
+#OBJCOPY	= ${BINUTILS}/i686-elf-objcopy
+NM			= ${BINUTILS}/i686-elf-nm
 
 #LINKOPTS	= -mcpu=pentium -Wl,-warn-common,-X,--oformat,binary,-e,kloaderMain
 
 ### kernelInit MUST BE FIRST ###
 # For some reason ld doesn't follow the "entry" directive in my linker script #
 KERNELOBJS	= kernelInit.o kernel.o hardware.o interrupts.o io.o isr.o keyboard.o memory.o \
-			paging.o pic.o process.o stdio.o string.o timer.o tss.o video.o
+			paging.o pic.o process.o sh.o stdio.o string.o syscall.o tasks.o timer.o tss.o video.o
 
 HEADERS		= $(INCDIR)/_va_list.h $(INCDIR)/conio.h $(INCDIR)/error.h $(INCDIR)/hardware.h $(INCDIR)/interrupts.h \
 			$(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/keyboard.h $(INCDIR)/memory.h $(INCDIR)/paging.h $(INCDIR)/pic.h \
 			$(INCDIR)/stdarg.h $(INCDIR)/stdio.h $(INCDIR)/string.h $(INCDIR)/timer.h $(INCDIR)/vga.h $(INCDIR)/video.h \
-			$(INCDIR)/process.h
+			$(INCDIR)/process.h $(INCDIR)/sh.h $(INCDIR)/syscall.h $(INCDIR)/tasks.h
 
 
 ##############
@@ -66,14 +68,15 @@ deps:
 	../mkdep.pl ${INCDIR}
 
 clean:
-	-/usr/bin/rm -f *.o *.d *.lst *.bak ${KERNELOBJ} ${KERNELSYM} ${KERNELLST} __bfe.log__ #${KERNELBIN}
+	-rm -f *.o *.d *.lst *.bak ${KERNELOBJ} ${KERNELSYM} ${KERNELLST} __bfe.log__ #${KERNELBIN}
 
 # Kernel target
 ${KERNELOBJ}: ${KERNELOBJS} ${LDSCRIPT} ${HEADERS} ${STDDEPEND}
 	$(LD) -o $@ $(KERNELOBJS)
 	${OBJDUMP} --line-numbers --source ${KERNELOBJ} >${KERNELLST}
 	/usr/bin/unix2dos ${KERNELLST}
-	${NM} --line-numbers --debug-syms ${KERNELOBJ} | /usr/bin/sort >${KERNELSYM}
+	# This sed line is a bit of a hack
+	${NM} --line-numbers --debug-syms --numeric-sort ${KERNELOBJ} | sed "s|`pwd`|./kernel|g" >${KERNELSYM}
 
 # Kernel binary target
 #${KERNELBIN}: ${KERNELOBJ} ${STDDEPEND}
@@ -84,151 +87,5 @@ ${KERNELOBJ}: ${KERNELOBJS} ${LDSCRIPT} ${HEADERS} ${STDDEPEND}
 #%.o: %.c %.h
 #	${CC} -c -o $@ $<
 
-# Kernel assembly sources
-kernelInit.o: \
-	kernelInit.s
-	${AS} -f elf -w+orphan-labels -o $@ $<
-
-isr.o: \
-	isr.s
-	${AS} -f elf -w+orphan-labels -o $@ $<
-
-paging.o: \
-	paging.s
-	${AS} -f elf -w+orphan-labels -o $@ $<
-
-tasks.o: \
-	tasks.s
-	${AS} -f elf -w+orphan-labels -o $@ $<
-
-tss.o: \
-	tss.s
-	${AS} -f elf -w+orphan-labels -o $@ $<
-
-# C sources
-hardware.o: \
-	hardware.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/hardware.h \
-	${INCDIR}/stdio.h
-	${CC} -c -o $@ $<
-	
-interrupts.o: \
-	interrupts.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/error.h \
-	${INCDIR}/interrupts.h \
-	${INCDIR}/io.h \
-	${INCDIR}/isr.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/pic.h \
-	${INCDIR}/selectors.h \
-	${INCDIR}/stdio.h
-	${CC} -c -o $@ $<
-
-io.o: \
-	io.c \
-	${INCDIR}/io.h
-	${CC} -c -o $@ $<
-
-kernel.o: \
-	kernel.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/hardware.h \
-	${INCDIR}/interrupts.h \
-	${INCDIR}/isr.h \
-	${INCDIR}/keyboard.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/memory.h \
-	${INCDIR}/pic.h \
-	${INCDIR}/process.h \
-	${INCDIR}/stdio.h \
-	${INCDIR}/timer.h \
-	${INCDIR}/video.h
-	${CC} -c -o $@ $<
-
-keyboard.o: \
-	keyboard.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/interrupts.h \
-	${INCDIR}/io.h \
-	${INCDIR}/keyboard.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/stdio.h \
-	${INCDIR}/video.h
-	${CC} -c -o $@ $<
-
-memory.o: \
-	memory.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/hardware.h \
-	${INCDIR}/memory.h \
-	${INCDIR}/paging.h \
-	${INCDIR}/stdio.h \
-	${INCDIR}/string.h
-	${CC} -c -o $@ $<
-
-pic.o: \
-	pic.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/interrupts.h \
-	${INCDIR}/io.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/pic.h \
-	${INCDIR}/stdio.h
-	${CC} -c -o $@ $<
-
-process.o: \
-	process.c \
-	${INCDIR}/hardware.h \
-	${INCDIR}/memory.h \
-	${INCDIR}/process.h \
-	${INCDIR}/selectors.h \
-	${INCDIR}/string.h \
-	${INCDIR}/video.h
-	${CC} -c -o $@ $<
-
-sched.o: \
-	sched.c
-	${CC} -c -o $@ $<
-
-stdio.o: \
-	stdio.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/interrupts.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/pic.h \
-	${INCDIR}/stdarg.h \
-	${INCDIR}/stdio.h \
-	${INCDIR}/string.h \
-	${INCDIR}/video.h
-	${CC} -c -o $@ $<
-
-string.o: \
-	string.c \
-	${INCDIR}/string.h
-	${CC} -c -o $@ $<
-
-timer.o: \
-	timer.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/interrupts.h \
-	${INCDIR}/io.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/stdio.h \
-	${INCDIR}/timer.h \
-	${INCDIR}/video.h
-	${CC} -c -o $@ $<
-
-video.o: \
-	video.c \
-	${INCDIR}/_va_list.h \
-	${INCDIR}/ctype.h \
-	${INCDIR}/io.h \
-	${INCDIR}/ktux.h \
-	${INCDIR}/stdio.h \
-	${INCDIR}/string.h \
-	${INCDIR}/vga.h \
-	${INCDIR}/video.h
-	${CC} -c -o $@ $<
-	
+include 	C.mk
+include 	asm.mk

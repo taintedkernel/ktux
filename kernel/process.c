@@ -27,81 +27,46 @@
 #include <string.h>			// memsetw
 #include <stdio.h>
 #include <video.h>			// putch()
+#include <tasks.h>
+#include <ktux.h>
 
 extern unsigned int tss;
 //extern void *pageBuffer;
 
-//unsigned int nextPID;
+int numTasks;
 unsigned int idlePID;
-unsigned int currentTask;
-unsigned int numTasks;
-process_struct *threads[MAX_THREADS];
-tss_struct systemTSS;
-process_struct *process;
-pmode_task_struct *pmodeTask;
+//unsigned int nextPID;
+//process_struct *threads[MAX_THREADS];
+//tss_struct systemTSS;
+//process_struct *process;
+//pmode_task_struct *pmodeTask;
+unsigned int numThreads=0;
 
-void test()
+// *NEW*
+process_struct threads[MAX_THREADS];
+int currentTask = -1;
+
+void init_multitasking()
 {
-	static int i=0;
-	
-	while (1) {
-		kprintf("test");
-		for(i=0;i<1000;i++);
-	}
-}
+	// 1 task: kernel idle loop, index=0
+	numThreads = 0;
 
-void one()
-{
-	static int i=0;
-	
-	while (1) {
-		if (i % 25) {
-			move_cursor(1, 1);
-			kprintf("%d", i);
-		}
-		i++;
-		if (i%1000) i=0;
-	}
-}
+	// index zero occupied by original kernel thread
+	create_thread(1, thread_one);
+	create_thread(2, thread_two);
+	create_thread(3, thread_monitor);
 
-void two()
-{
-	static int i=0;
-	
-	while (1) {
-		if (i % 25) {
-			move_cursor(40, 1);
-			kprintf("%d", i);
-		}
-		i++;
-		if (i%1000) i=0;
-	}
-}
+	kprintf("new thread[1].esp0 = 0x%p\n", threads[1].esp0);
+	kprintf("new thread[2].esp0 = 0x%p\n", threads[2].esp0);
+	kprintf("new thread[3].esp0 = 0x%p\n", threads[3].esp0);
 
-void idle()
-{
-	static int i=0;
-	
-	while (1) {
-		kprintf("idle");
-	}
-}
-
-void init_multitasker()
-{
-	numTasks = 0;
-	currentTask = 0;
-	idlePID = create_kernel_thread("idle", (unsigned int)&idle, KERNEL_DATA_SELECTOR, 0x0202, 0);	
-
-	kprintf("idle() PID=%d\n", idlePID);
-
-/*	lea	eax, [tss]
+	/*lea	eax, [tss]
 	mov	ebx, 0x0528				; GDTbase (500) + TSS selector (28)
 	mov	[ebx+2], ax
 	shr	eax, 16
 	mov [ebx+4], al
 	mov [ebx+7], ah
-	
+
 	mov	ax, 0x28				; ../include/selectors.h
 	ltr	ax
 	ret*/
@@ -116,49 +81,90 @@ void init_multitasker()
 		"mov %al, 4(%ebx)\n\t"
 		"mov %ah, 7(%ebx)\n\t"
 		"mov $0x28, %ax\n\t"
-		"ltr %ax\n\t");
-	*/
+		"ltr %ax\n\t");*/
 }
 
-void kill_thread()
+void start_scheduler()
 {
-	task_switch(0);
+	currentTask = 0;
+	threads[currentTask].time = 0;
 }
 
-unsigned int task_switch(unsigned int oldESP)
+volatile unsigned int task_switch(unsigned int currentESP)
 {
-	static unsigned int foundTask;
+	if (currentTask < 0)		// if not init
+		return currentESP;
 
-	// save current process stack, then load new task
-	//if (oldESP > 0) {
-		process = threads[currentTask];
-		process->ustack = oldESP;
-	//}
-	
-	foundTask = 0;
-	while (!foundTask) {
-		if (++currentTask > numTasks) currentTask = 0;
-		if (threads[currentTask] != 0)
-		{
-			foundTask = 1;
-			process = threads[currentTask];
-			systemTSS.esp0 = process->kstack;
-			putch('.');
-			return process->ustack;
+	if ( threads[currentTask].time == INT_PER_SLICE )
+	{
+		threads[currentTask].time = 0;
+		threads[currentTask].esp0 = currentESP;
+		threads[currentTask].status = PROCESS_SLEEP;
+		while(1) {
+			currentTask = ++currentTask % (numThreads+1);
+			if ( threads[currentTask].status == PROCESS_SLEEP ||
+				threads[currentTask].status == PROCESS_READY )
+				break;
 		}
+		/*if ( currentTask == 0 )
+		{
+			// clean-up
+		}*/
+		//asm volatile("xchg %bx, %bx");
+
+		threads[currentTask].status = PROCESS_RUN;
+		return threads[currentTask].esp0;
 	}
 
-	
-	/*kprintf("fatal error!\n");
-		while(1);*/
-
-	return 0;
+	threads[currentTask].time++;
+	return currentESP;
 }
 
-void spawn_threads(void)
+/*void create_thread(void (*thread)())
 {
-	kprintf("spawning threads...\ncreating thread 'one', returned=%d\n", create_kernel_thread("one", (unsigned int)&one, KERNEL_DATA_SELECTOR, 0x0202, 0));
-	kprintf("creating thread 'two', returned=%d\n", create_kernel_thread("two", (unsigned int)&two, KERNEL_DATA_SELECTOR, 0x0202, 0));
+	return;
+}*/
+
+void create_thread(unsigned int id, void (*thread)())
+{
+	unsigned int *stack;
+
+	//kprintf("create_thread(%u) : entering function\n", id);
+
+	threads[id].status = PROCESS_INIT;
+	threads[id].esp0 = (unsigned int)kmalloc(STACK_SIZE) + STACK_SIZE;
+
+	kprintf("create_thread(), esp0 : 0x%08X\n", threads[id].esp0);
+
+	stack = (unsigned int *)threads[id].esp0;
+
+	*--stack = (unsigned int)0x0202;					// EFLAGS
+	*--stack = (unsigned int)KERNEL_CODE_SELECTOR;		// CS
+	*--stack = (unsigned int)thread;					// EIP
+
+	// PUSHAD
+	*--stack = id;
+	*--stack = id;
+	*--stack = id;
+	*--stack = id;
+
+	*--stack = id;
+	*--stack = id;
+	*--stack = id;
+	*--stack = id;
+
+	*--stack = KERNEL_DATA_SELECTOR;			// DS
+	*--stack = KERNEL_DATA_SELECTOR;			// ES
+	*--stack = KERNEL_DATA_SELECTOR;			// FS
+	*--stack = KERNEL_DATA_SELECTOR;			// GS
+
+	numThreads++;
+	threads[id].id = get_next_pid();
+	threads[id].time = 0;
+	threads[id].priv = THREAD_KERNEL;
+	threads[id].esp0 = (unsigned int)stack;
+	threads[id].status = PROCESS_READY;
+	threads[id].priority = 0;
 }
 
 unsigned int get_next_pid(void)
@@ -168,60 +174,103 @@ unsigned int get_next_pid(void)
 
 unsigned int get_page_directory(unsigned int pid)
 {
-	return pid; //threads[pid].cr3;
+	return threads[pid].cr3;
 }
 
 /* unsigned int CreateThread(index, type, *entryPoint())
- *	
+ *
  * This funtion creates a new thread of execution in the system.  Functionality
  * differs greatly for a kernel-level thread or a user application.  In all cases
  * a new stack is allocated, EIP is set with 'entryPoint', segment descriptors are
  * set correctly.  If creating a user-level thread, a new page directory is created
- * and virtual address space is allocated, set to size 'addressSpace'.  
+ * and virtual address space is allocated, set to size 'addressSpace'.
  */
 unsigned int create_kernel_thread(char *name, unsigned int entry, unsigned int ds, unsigned int eflags, char priv)
 {
 	unsigned int i;
-	//unsigned int *stack;
+	unsigned int *stack;
+	process_struct *process;
 
 	//kprintf("in create_kernel_thread()\n");
 	cli();
 
 	// find unallocated entry in thread array
 	i = 0;
-	while((unsigned int)threads[i] != 0 && i < MAX_THREADS) i++;
+	//while((unsigned int)threads[i] != 0 && i < MAX_THREADS) i++;
 	if (i == MAX_THREADS) return -1;
-
 	//kprintf("found i=%d\n", i);
 
 	numTasks++;
+
+	unsigned int *test = kmalloc(0x10);
+	int j;
+	for (j=0;j<0x10;j++)
+		test[j] = j;
+
 	process = (process_struct *)kmalloc(sizeof(process_struct));
 
-	kprintf("creating thread '%s', allocd' process struct=0x%p\n", name, process);
+	kprintf("creating thread '%s', allocd process struct=0x%p\n", name, process);
+	kprintf("\tentry=0x%p, ds=0x%p, eflags=0x%p, priv=0x%p\n", entry, ds, eflags, priv);
 
-	threads[i] = process;
-	
+	//threads[i] = process;
+
 	//kprintf("marked process address\n");
 
 	//memcpy(&process->name, name, strlen(name));
-	
+
 	/*memsetw(&process, 0, sizeof(process_struct));
 	memsetw(&process->stack, 0, sizeof(process->stack));
 	memsetw(&process->p10_stack, 0, sizeof(process->p10_stack));*/
-	
+
 	//kprintf("finished memset and memcpy\n", i);
 
 	process->id = i;
 	process->priv = priv;
 	process->status = PROCESS_INIT;
-	process->kstack = (unsigned int)process->p10_stack + STACK_SIZE;
-	
-	//kprintf("process->stack=0x%p\n", process->stack);
-	
+
+	process->esp0 = (unsigned int)kmalloc(0x100) + 0x100;
+	stack = (unsigned int *)process->esp0;
+
+	kprintf("\tallocd stack: from 0x%p to 0x%p\n", ((unsigned int)stack)-0x100, stack);
+
+	// EFLAGS, CS, & EIP (SS & ESP also for DPL change)
+	*--stack = eflags;
+	*--stack = KERNEL_CODE_SELECTOR;
+	*--stack = (unsigned int)entry;
+
+	// Regular stacks
+	*--stack = i;			// EDI
+	*--stack = i;			// ESI
+	*--stack = i;			// EBP
+	*--stack = i;			// offset
+	*--stack = i;			// EBX
+	*--stack = i;			// EDX
+	*--stack = i;			// ECX
+	*--stack = i;			// EAX
+
+	// Segment & other registers
+	// Kernel-level (DPL 0) is easy,
+	*--stack = ds;			// DS
+	*--stack = ds;			// ES
+	*--stack = ds;			// FS
+	*--stack = ds;			// GS
+
+	// struct (*MUST* be after user-level page mapping)
+	process->esp0 = (unsigned int)stack;
+	process->id = get_next_pid();
+	process->priority = 0;
+	process->status = PROCESS_INIT;
+	process->cr3 = (unsigned int)P_KERNEL_PAGE_DIRECTORY;
+
+	/*
+	//process->kstack = (unsigned int)process->p10_stack + STACK_SIZE;	// ?????
+	//kprintf("process->kstack=0x%p\n", process->kstack);
+
 	pmodeTask = (pmode_task_struct *)(process->stack + STACK_SIZE);
+	process->ustack = (unsigned int)pmodeTask;
 
 	//stack = (unsigned int *)0xE0000000;
-	//*stack = 100;
+	// *stack = 100;
 
 	pmodeTask->gs = ds;
 	pmodeTask->fs = ds;
@@ -239,15 +288,14 @@ unsigned int create_kernel_thread(char *name, unsigned int entry, unsigned int d
 	pmodeTask->ebp = 0;
 	pmodeTask->esi = 0;
 	pmodeTask->edi = 0;
-	process->ustack = (unsigned int)pmodeTask;
+	*/
 
 	kprintf("finished create_kernel_thread(), re-enabling interrupts\n");
 	sti();
 
 	return i;
 }
-	
-	
+
 /*
 	newProcess = kmalloc(sizeof(process));
 	memsetw((void *)&threads[index], 0, sizeof(threads[index]));
@@ -255,37 +303,8 @@ unsigned int create_kernel_thread(char *name, unsigned int entry, unsigned int d
 	// Stack
 	threads[index].esp0 = alloc_page();
 	map_kpage((unsigned int)pageBuffer, threads[index].esp0, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
-	
+
 	stack = (unsigned int *)threads[index].esp0;
-
-	// EFLAGS, CS, & EIP (SS & ESP also for DPL change)
-	*--stack = 0x202;
-	*--stack = KERNEL_CODE_SELECTOR;
-	*--stack = (unsigned int)entryPoint;
-
-	// Regular stacks
-	*--stack = 0;			// EDI
-	*--stack = 0;			// ESI
-	*--stack = 0;			// EBP
-	*--stack = 0;			// offset
-	*--stack = 0;			// EBX
-	*--stack = 0;			// EDX
-	*--stack = 0;			// ECX
-	*--stack = 0;			// EAX
-
-	// Segment & other registers
-	// Kernel-level (DPL 0) is easy, 
-	*--stack = KERNEL_DATA_SELECTOR;		// DS
-	*--stack = KERNEL_DATA_SELECTOR;		// ES
-	*--stack = KERNEL_DATA_SELECTOR;		// FS
-	*--stack = KERNEL_DATA_SELECTOR;		// GS
-	
-	// struct (*MUST* be after user-level page mapping)
-	threads[index].esp0 = (unsigned int)stack;
-	threads[index].pid = get_next_pid();
-	threads[index].priority = 0;
-	threads[index].status = PROCESS_INIT;
-	threads[index].cr3 = (unsigned int)P_KERNEL_PAGE_DIRECTORY;
 
 	numTasks++;
 */
@@ -296,14 +315,14 @@ unsigned int create_user_thread(unsigned int index, unsigned int entryPoint)
 	unsigned int *stack;
 	unsigned int *newPD = NULL;
 	unsigned int *newPT = NULL;
-	
+
 	newProcess = kmalloc(sizeof(process));
 	memsetw((void *)&threads[index], 0, sizeof(threads[index]));
 
 	// Stack
 	threads[index].esp0 = alloc_page();
 	map_kpage((unsigned int)pageBuffer, threads[index].esp0, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
-	
+
 	stack = (unsigned int *)threads[index].esp0;
 
 	// EFLAGS, CS, & EIP (SS & ESP also for DPL change)
@@ -326,28 +345,28 @@ unsigned int create_user_thread(unsigned int index, unsigned int entryPoint)
 	*--stack = USER_DATA_SELECTOR;			// DS
 	*--stack = USER_DATA_SELECTOR;			// ES
 	*--stack = USER_DATA_SELECTOR;			// FS
-	*--stack = USER_DATA_SELECTOR;			// GS	
+	*--stack = USER_DATA_SELECTOR;			// GS
 
 	// Allocate new paging structures
 	*newPD = alloc_page();
 	*newPT = alloc_page();
-	
+
 	// we will have to initially map these pages to the kernel to write to them
 	map_kpage(USER_PAGE_DIRECTORY, (unsigned int)newPD, (PTE_FLAG_PRESENT | PDE_FLAG_RW));
 
 	// Page directory //
 	// Map our inital page table to 1st 4mb in page directory
 	i=0; newPD[i++] = makePDEphys((unsigned int)newPT, (PDE_FLAG_PRESENT | PDE_FLAG_RW | PDE_FLAG_USER));
-	
+
 	// Mark rest of page directory not present
 	while (i % PDE_PER_PD > 0) {
 		newPD[i++] = makePDEphys(0, PDE_FLAG_USER);
 	}
-	
-	// Page tables //		
+
+	// Page tables //
 	// Map our firstly allocated page to the first 4kb
 	i=0; newPT[i++] = makePTEphys((unsigned int)entryPoint, (PTE_FLAG_PRESENT | PTE_FLAG_RW | PTE_FLAG_USER));
-	
+
 	// Initialize rest of page table (mark not present)
 	while (i % PTE_PER_PT > 0) {
 		newPT[i++] = makePTEphys(0, (PTE_FLAG_RW | PTE_FLAG_USER));
@@ -355,16 +374,16 @@ unsigned int create_user_thread(unsigned int index, unsigned int entryPoint)
 
 	// Map user stack
 	map_page_helper(newPD, USER_STACK, threads[index].esp0, (PTE_FLAG_PRESENT | PTE_FLAG_RW | PTE_FLAG_USER));
-	
+
 	// Map kernel virtual address space
 	map_ktables(newPD);
-	
+
 	// Map our page directory and tables...  read-only access to process
 	map_page_helper(newPD, USER_PAGE_DIRECTORY, (unsigned int)newPD, (PTE_FLAG_PRESENT | PTE_FLAG_USER));
 	map_page_helper(newPD, USER_PAGE_TABLE_1, (unsigned int)newPT, (PTE_FLAG_PRESENT | PTE_FLAG_USER));
-	
+
 	// struct (*MUST* be after user-level page mapping)
-	threads[index].esp0 = USER_STACK + PAGE_SIZE;		
+	threads[index].esp0 = USER_STACK + PAGE_SIZE;
 	threads[index].heapStart = KERNEL_HEAP_ADDR;
 
 	//threads[index].esp0 = (unsigned int)stack;
@@ -375,4 +394,24 @@ unsigned int create_user_thread(unsigned int index, unsigned int entryPoint)
 
 	numTasks++;*/
 	return index+entryPoint;
+}
+
+void do_idle()
+{
+	static unsigned int i=0;
+	static char progress[] = "\\-/|";
+	static unsigned short cursor=0;
+	static unsigned int p=0;
+	//putch(' ');
+
+	kprintf("\nidle task : [   ]");
+	cursor = get_csr_x() - 3;
+
+	while (1) {
+		i++;
+		if (i%3) {
+			kprintf("\x1B[%d;%dH\x1B[3%dm", get_csr_y(), cursor, p%8);
+			putch(progress[p++%4]);
+		}
+	}
 }

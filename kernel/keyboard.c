@@ -28,6 +28,8 @@
 #include <io.h>							// inportb()
 #include <stdio.h>						// putch()
 #include <interrupts.h>                 // reboot()
+#include <sh.h>							// processCommand()
+#include <string.h>						// memsetd()
 
 
 char scancode_to_ascii[0x100] = {
@@ -60,13 +62,18 @@ char scancode_to_ascii_shift[0x100] = {
     ' ',SPECIAL,RAW1_F1,RAW1_F2,RAW1_F3,RAW1_F4,RAW1_F5,RAW1_F6,RAW1_F7,RAW1_F8,RAW1_F9,RAW1_F10,PAUSE,SPECIAL,SPECIAL,
 };
 
+char echo=1;
 unsigned int kbdBufPos;
+unsigned int cmdBufPos;
+
 char keyboardBuffer[KBD_BUF_SIZE];
+char commandBuffer[CMD_BUF_SIZE];
 
 
 int init_keyboard(void)
 {
 	kbdBufPos = 0;
+	cmdBufPos = 0;
 	return 0;
 }
 
@@ -74,10 +81,11 @@ void kbd_irq_handler(void)
 {
 	static unsigned char keycode;
 
-// get scancode from port 0x60 
+	// get scancode from port 0x60
 	keycode = inportb(0x60);
 	keyboardBuffer[kbdBufPos++ % KBD_BUF_SIZE] = keycode;
 
+	// *TODO* defer this to a bottom half
 	process_kbd(keycode);
 }
 
@@ -85,15 +93,15 @@ void process_kbd(unsigned char keycode)
 {
 	static unsigned int i;
 	static unsigned short kbd_status, saw_break_code;
-	static unsigned short temp;	
-	
-// check for break keycode (i.e. a keycode is released) 
+	static unsigned short temp;
+
+	// check for break keycode (i.e. a keycode is released)
 	if(keycode >= 0x80)
 	{
 		saw_break_code = 1;
 		keycode &= 0x7F;
 	}
-// the only break codes we're interested in are Shift, Ctrl, Alt 
+	// the only break codes we're interested in are Shift, Ctrl, Alt
 	if(saw_break_code)
 	{
 		if(keycode == RAW1_LEFT_ALT || keycode == RAW1_RIGHT_ALT)
@@ -105,7 +113,7 @@ void process_kbd(unsigned char keycode)
 		saw_break_code = 0;
 		return;
 	}
-// it's a make keycode: check the "meta" keycodes, as above 
+	// it's a make keycode: check the "meta" keycodes, as above
 	if(keycode == RAW1_LEFT_ALT || keycode == RAW1_RIGHT_ALT)
 	{
 		kbd_status |= KBD_META_ALT;
@@ -121,8 +129,8 @@ void process_kbd(unsigned char keycode)
 		kbd_status |= KBD_META_SHIFT;
 		return;
 	}
-// Scroll Lock, Num Lock, and Caps Lock set the LEDs. These keycodes
-// have on-off (toggle or XOR) action, instead of momentary action 
+	// Scroll Lock, Num Lock, and Caps Lock set the LEDs. These keycodes
+	// have on-off (toggle or XOR) action, instead of momentary action
 	if(keycode == RAW1_SCROLL_LOCK)
 	{
 		kbd_status ^= KBD_META_SCRL;
@@ -136,7 +144,7 @@ void process_kbd(unsigned char keycode)
 	if(keycode == RAW1_CAPS_LOCK)
 	{
 		kbd_status ^= KBD_META_CAPS;
-LEDS:		write_kbd(0x60, 0xED);	// "set LEDs" command 
+LEDS:		write_kbd(0x60, 0xED);	// "set LEDs" command
 		temp = 0;
 		if(kbd_status & KBD_META_SCRL)
 			temp |= 1;
@@ -144,12 +152,12 @@ LEDS:		write_kbd(0x60, 0xED);	// "set LEDs" command
 			temp |= 2;
 		if(kbd_status & KBD_META_CAPS)
 			temp |= 4;
-		write_kbd(0x60, temp);	// bottom 3 bits set LEDs 
+		write_kbd(0x60, temp);	// bottom 3 bits set LEDs
 		return;
 	}
 
-// if it's F1, F2 etc. switch to the appropriate virtual console 
-	if (keycode >= RAW1_F1 && keycode <= RAW1_F10 && (kbd_status & KBD_META_ALT) && (kbd_status & KBD_META_CTRL))
+	// if it's F1, F2 etc. switch to the appropriate virtual console
+	if (keycode >= RAW1_F1 && keycode <= RAW1_F10) // && (kbd_status & KBD_META_ALT) && (kbd_status & KBD_META_CTRL))
 	{
 		switch(keycode)
 		{
@@ -197,11 +205,17 @@ LEDS:		write_kbd(0x60, 0xED);	// "set LEDs" command
 	{
 		i = convert(keycode, kbd_status);
 		if(i != 0)
-			putch(i);
+		{
+			if (cmd_buf_add(i) == OK && echo)
+			{
+				putch(i);
+				//if (i == 's') start_scheduler();
+			}
+		}
 	}
 
 	// NO PRINTF IN INTERRUPT HANDLERS - NON RE-ENTRANT! //
-	//kprintf("IRQ1 handled, keycode=%04X, char='%c'\n", keycode, convert(keycode));	
+	//kprintf("IRQ1 handled, keycode=%04X, char='%c'\n", keycode, convert(keycode));
 }
 
 void write_kbd(unsigned adr, unsigned char data)
@@ -254,4 +268,41 @@ unsigned convert(unsigned key, unsigned short kbd_status)
 
 /* I really don't know what to do yet with Alt, Ctrl, etc. -- punt */
 	return temp;
+}
+
+int cmd_buf_add(char key)
+{
+	unsigned int end;
+
+	if (key == '\b')
+	{
+		if (cmdBufPos > 0) {
+			commandBuffer[--cmdBufPos] = '\0';
+			return OK;
+		}
+		else
+			return ERROR;
+	}
+	else if (key == '\t')
+	{
+		for (end=(cmdBufPos+8) & 7; cmdBufPos < end;
+			commandBuffer[cmdBufPos++]=' ' )
+			;
+		return OK;
+	}
+	else if (key == '\n')
+	{
+		//commandBuffer[cmdBufPos] = '\n';
+		processCommand(commandBuffer);
+		memsetd(commandBuffer, 0, CMD_BUF_SIZE >> 2);
+		cmdBufPos = 0;
+		return OK;
+	}
+	else {
+		commandBuffer[cmdBufPos++ % CMD_BUF_SIZE] = key;
+		return OK;
+	}
+
+	// never reached
+	return ERROR;
 }

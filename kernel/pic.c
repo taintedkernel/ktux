@@ -26,24 +26,31 @@
 #include <stdio.h>
 #include <io.h>
 
+char irqStatus[MAX_IRQ_IMP];
+
 extern int idtInitialized;
 
 int init_pic(void)
 {
+	unsigned int i;
+
 	// Remap our PICs
 	remap_pics(IRQ0_INT, IRQ8_INT);
 
 	// Just disable interrupts for now
 	set_irqs(~0x00, ~0x00);		// Disable them all
 
-	return 0;
+	for (i=0; i<MAX_IRQ_IMP; i++)
+		irqStatus[i]=0;
+
+	return OK;
 }
 
 void remap_pics(unsigned int irq0Int, unsigned int irq8Int)
 {
 	outportb(PIC1, ICW1);
 	outportb(PIC2, ICW1);
-	
+
 	outportb(PIC1+1, irq0Int);
 	outportb(PIC2+1, irq8Int);
 
@@ -54,12 +61,13 @@ void remap_pics(unsigned int irq0Int, unsigned int irq8Int)
 	outportb(PIC2+1, ICW4);
 }
 
-void enable_irq(unsigned int irqNum)
+int enable_irq(unsigned int irqNum)
 {
 	if (!idtInitialized) {
 		panic(false, "kernel error: set_irqs() called without initialization");
-		return;
 	}
+	if (irqNum > MAX_IRQ_IMP)
+		return ERROR;
 
 	if (irqNum < 8)
 		outportb(PIC1+1, inportb(PIC1+1) & ~(1 << irqNum));
@@ -68,14 +76,18 @@ void enable_irq(unsigned int irqNum)
 		outportb(PIC1+1, inportb(PIC1+1) & ~0x04);
 		outportb(PIC2+1, inportb(PIC2+1) & ~(1 << irqNum));
 	}
+
+	irqStatus[irqNum]=1;
+	return OK;
 }
 
-void disable_irq(unsigned int irqNum)
+int disable_irq(unsigned int irqNum)
 {
 	if (!idtInitialized) {
 		panic(false, "kernel error: set_irqs() called without initialization");
-		return;
 	}
+	if (irqNum > MAX_IRQ_IMP)
+		return ERROR;
 
 	if (irqNum < 8)
 		outportb(PIC1+1, inportb(PIC1+1) | (1 << irqNum));
@@ -84,6 +96,25 @@ void disable_irq(unsigned int irqNum)
 		outportb(PIC1+1, inportb(PIC1+1) & ~0x04);
 		outportb(PIC2+1, inportb(PIC2+1) | (1 << irqNum));
 	}
+
+	irqStatus[irqNum]=0;
+	return OK;
+}
+
+int toggle_irq(unsigned int irqNum)
+{
+	if (!idtInitialized) {
+		panic(false, "kernel error: set_irqs() called without initialization");
+	}
+	if (irqNum > MAX_IRQ_IMP)
+		return ERROR;
+
+	if (irqStatus[irqNum] == 0)
+		enable_irq(irqNum);
+	else if (irqStatus[irqNum] == 1)
+		disable_irq(irqNum);
+
+	return OK;
 }
 
 // Enable IRQs, pass 8-bit mask to function

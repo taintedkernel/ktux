@@ -379,11 +379,17 @@ DetectMemory:
 	cmp	ecx, 20				; BIOS can't copy less than 20 bytes, problem occured
 	jl	.memCheckError
 	jg	.memCheckError			; BIOS can't copy more than 20 bytes either
-	
-	mov	eax, [es:di]			; Count total RAM
+
+	; Count total system RAM
+	; Search only marked available regions
+	mov	ecx, 0x1
+	cmp	ecx, [es:di+16]
+	jne	.memCheckNoCount
+	mov	eax, [es:di]
 	add	eax, [es:di+8]
 	mov	[totalMemory], eax
 
+.memCheckNoCount:
 	add	di, 20
 	cmp	ebx, 0
 	je	.memCheckDone			; ebx=0 if BIOS mapping done
@@ -404,7 +410,8 @@ DetectMemory:
 	call	kloaderFatalError
 
 .memCheckDone:
-	mov	[es:di], dword 0xFFFFFFFF	; Put a end-of-buffer marker
+	;add	di, 4
+	mov	[es:di], dword 0xDEADBEEF	; Put a end-of-buffer marker
 	mov	eax, e820Buffer			; Mark location of buffer
 	;add	eax, BOOTSTUB_ADDRESS
 	mov	[e820BufferAddress], eax

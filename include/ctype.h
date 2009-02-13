@@ -16,7 +16,7 @@
 #define isalnum(c)	((unsigned)(c) & (CT_UP | CT_LOW | CT_DIG))
 #define isalpha(c)	((unsigned)(c) & (CT_UP | CT_LOW))
 #define iscntrl(c)	((unsigned)(c) & (CT_CTL))
-#define isdigit(c)	((unsigned)(c) & (CT_DIG))
+#define isdigit(c)	((unsigned)(c) >= '0' && (unsigned)(c) <= '9')
 #define isgraph(c)	((unsigned)(c) & (CT_PUN | CT_UP | CT_LOW | CT_DIG))
 #define islower(c)	((unsigned)(c) & (CT_LOW))
 #define isprint(c)	((unsigned)(c) & (CT_PUN | CT_UP | CT_LOW | CT_DIG | CT_SP))

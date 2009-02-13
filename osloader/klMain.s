@@ -29,8 +29,8 @@
 	GLOBAL cpuInfoStructAddress
 	GLOBAL totalMemory
 	GLOBAL e820BufferAddress
-	
-	GLOBAL bootDrive	
+
+	GLOBAL bootDrive
 	GLOBAL BytesPerSector
 	GLOBAL MaxRootDirEntryCount
 	GLOBAL SectorsPerCluster
@@ -112,7 +112,7 @@ kloaderMain:
 	jmp	kloaderFatalError
 
 	; Update progress
-.A20enabled:	
+.A20enabled:
 	mov	dx, TEXT_WHITE
 	mov	si, msgDot
 	call	kloaderPrintString
@@ -136,7 +136,7 @@ kloaderMain:
 
 	; Start initialization
 	call	kloaderDetectHardware
-	
+
 	; Display message
 	call	kloaderPrintCrLf
 	mov	dx, TEXT_WHITE
@@ -148,17 +148,23 @@ kloaderMain:
 	push	word kernelFilename
 	call	kloaderLoadKernel
 
-	; Check for error	
+	; Check for error
 	cmp	ax, 0
 	jge	.loadOK
 	push	ax
 	jmp	displayLoadError
 	add	sp, 0x02
-	
+
 	; Mark size of kernel (round up to nearest page boundry)
-.loadOK
+.loadOK:
 	mov	dword [kernelEndAddr], eax
 	call	kloaderClearScreen
+	mov	dx, TEXT_WHITE
+	mov	si, msgInitSystem
+	call	kloaderPrintString
+	call	kloaderPrintCrLf
+	mov	si, msgMemory
+	call	kloaderPrintString
 	;xor	eax, eax
 	;mov	eax, KERNEL_END
 	;sub	eax, KERNEL_START
@@ -167,7 +173,7 @@ kloaderMain:
 
 	; Go to protected mode!
 	cli
-	mov	eax, cr0 
+	mov	eax, cr0
 	or	al, 1
 	mov	cr0, eax
 
@@ -181,12 +187,12 @@ kloaderMain:
 
 clearPipeline:
 	[BITS 32]
-	
+
 	; Load new segment descriptors
 	;mov	eax, dataSel
 	mov	eax, dataSelTmp
 	mov	ds, eax
-	mov	es, eax 
+	mov	es, eax
 	mov	fs, eax
 	mov	gs, eax
 	mov	eax, dataSel
@@ -194,6 +200,7 @@ clearPipeline:
 	mov	esp, PM_STACK_ADDRESS
 
 	; Pass our environment info to the kernel
+	; Adjust pointer for temporary pre-paging kernel segment
 	mov	eax, hardwareStruct
 	add	eax, KERNEL_VIRTUAL
 	sub	eax, KERNEL_PHYSICAL
@@ -225,23 +232,23 @@ kloaderUnknownFS:
 displayLoadError:
 	pusha
 	mov	bp, sp
-	
+
 	mov	dl, TEXT_ERROR
 	mov	ax, word [SS:(BP+18)]
-	
+
 	cmp	ax, ERR_LOAD_ROOT
 	jne	.1
-	
+
 	mov	si, msgNoRoot
 	call	kloaderPrintString
 	mov	si, msgCorruption
 	call	kloaderPrintString
 	jmp	.done
-	
+
 .1:
 	cmp	ax, ERR_NO_FILE
 	jne	.2
-	
+
 	mov	si, msgKernelFile
 	call	kloaderPrintString
 	mov	si, msgNoFile1
@@ -249,17 +256,17 @@ displayLoadError:
 	mov	si, msgNoFile2
 	call	kloaderPrintString
 	jmp	.done
-	
+
 .2:
 	cmp	ax, ERR_LOAD_FAT
 	jne	.3
-	
+
 	mov	si, msgNoFAT
 	call	kloaderPrintString
 	mov	si, msgCorruption
 	call	kloaderPrintString
 	jmp	.done
-	
+
 .3:
 	cmp	ax, ERR_LOAD_KERNEL
 	jne	.4
@@ -274,16 +281,16 @@ displayLoadError:
 .4:
 	cmp	AX, ERR_NOT_EXEC_ELF
 	jne	.5
-	
+
 	mov	si, msgKernelFile
 	call	kloaderPrintString
 	mov	si, msgBadFile
 	call	kloaderPrintString
-	
+
 .5:
 	cmp	AX, ERR_NUM_SEGMENTS
 	jne	.6
-	
+
 	mov	si, msgKernelFile
 	call	kloaderPrintString
 	mov	si, msgNumSegments
@@ -292,21 +299,21 @@ displayLoadError:
 .6:
 	cmp	AX, ERR_SEGMENT_LAYOUT
 	jne	.7
-	
+
 	mov	si, msgKernelFile
 	call	kloaderPrintString
 	mov	si, msgSegmentLayout
 	call	kloaderPrintString
-	
+
 .7:
 	cmp	AX, ERR_SEGMENT_ALIGN
 	jne	.done
-	
+
 	mov	si, msgKernelFile
 	call	kloaderPrintString
 	mov	si, msgSegmentAlign
 	call	kloaderPrintString
-		
+
 .done:
 	popa
 	jmp $
@@ -328,13 +335,13 @@ displayLoadError:
 EnableA20:
 
 	; This subroutine will enable the A20 address line in the keyboard
-	; controller.  Takes no arguments.  Returns 0 in EAX on success, 
+	; controller.  Takes no arguments.  Returns 0 in EAX on success,
 	; -1 on failure.
 	pusha
 	cli
 	mov	cx, 5				; Retry up to 5 times to enable A20
 
-.startAttempt1:		
+.startAttempt1:
 	call	KeyboardCmdWait			; Wait for the controller to be ready for a command
 	mov	al, 0xd0			; Tell the controller we want to read the current status.
 	out	0x64, al			; Send the command 0xd0 (Read Output Port)
@@ -345,12 +352,12 @@ EnableA20:
 	push	ax
 
 .commandWait2:				; Wait for the controller to be ready for a command
-	in	al, 0x64			
+	in	al, 0x64
 	bt	ax, 1
 	jc 	.commandWait2
 
 	mov	al, 0x0d1			; Tell the controller we want to write the status byte again
-	out	0x64, al	
+	out	0x64, al
 
 	call	KeyboardCmdWait			; Wait for the controller to be ready for the data
 	pop	ax				; Write the new value to port 60h (we saved old value before)
@@ -360,7 +367,7 @@ EnableA20:
 	; Finally, we will attempt to read back the A20 status to ensure it was enabled
 	call	KeyboardCmdWait			; Wait for the controller to be ready for a command
 	mov	al, 0x0d0			; Send the command D0h: read output port.
-	out	0x64, al	
+	out	0x64, al
 
 	call	KeyboardDataWait		; Wait for the controller to be ready with a byte of data
 	xor 	ax, ax				; Read the current port status from port 60h
@@ -383,7 +390,7 @@ EnableA20:
 	; Again, we will attempt to read back the A20 status to ensure it was enabled
 	call	KeyboardCmdWait			; Wait for the controller to be ready for a command
 	mov	al, 0x0d0			; Send the command D0h: read output port.
-	out 	0x64, al	
+	out 	0x64, al
 
 	call	KeyboardDataWait		; Wait for the controller to be ready with a byte of data
 	xor	ax, ax				; Read the current port status from port 60h
@@ -430,13 +437,15 @@ KeyboardDataWait:
 ;*******************************************************************************
 ; DATA SEGMENT
 ;*******************************************************************************
-	
+
 	SECTION .data
 
 ; Messages
 msgDot				db ".", 0
 msgFatalError		db "Fatal error!", 0
 msgInitializing		db "Initializing", 0
+msgInitSystem		db "initializing system :", 0
+msgMemory			db "memory ...", 0
 msgLoadingKernel	db "Loading kernel", 0
 msgHaltingSystem	db "Halting system!", 0
 msgProtected		db "protected mode enabled", 0
@@ -495,7 +504,7 @@ VolumeID				dd 0			; 24 - 27 Volume ID
 VolumeName				db '           '	; 28 - 42 Volume name
 FSType					db '        '	 	; 43 - 4A Filesystem type
 fat12BPB_END:
-	
+
 
 	; GDT selector
 	ALIGN 4

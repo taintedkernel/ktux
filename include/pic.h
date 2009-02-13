@@ -29,7 +29,6 @@
 #define ICW1			0x11
 #define ICW4			0x01
 
-
 #define cli() __asm__ __volatile__ ("cli");
 #define sti() __asm__ __volatile__ ("sti");
 #define hlt() __asm__ __volatile__ ("hlt");
@@ -43,8 +42,9 @@
 // function prototypes
 int init_pic(void);
 void remap_pics(unsigned int irq0Int, unsigned int irq8Int);
-void enable_irq(unsigned int irqNum);
-void disable_irq(unsigned int irqNum);
+int enable_irq(unsigned int irqNum);
+int disable_irq(unsigned int irqNum);
+int toggle_irq(unsigned int);
 void set_irqs(int mask82590, int mask82591);
 
 #endif

@@ -23,6 +23,15 @@ void *memsetw(void *dst, int val, size_t count)
 	return dst;
 }
 
+void *memsetd(void *dst, int val, size_t count)
+{
+	unsigned int *temp = (unsigned int *)dst;
+
+	for( ; count != 0; count--)
+		*temp++ = val;
+	return dst;
+}
+
 size_t strlen(const char *str)
 {
 	size_t ret_val;

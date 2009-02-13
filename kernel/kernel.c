@@ -31,81 +31,113 @@
 #include <stdio.h>
 #include <video.h>
 #include <process.h>
+#include <sh.h>
 
 #define BUFFER_SIZE 0x1000
 
 systemInfo *thisSystem;
 
 unsigned int *pointer;
-
+//extern unsigned int t1;
 
 // We come in with interrupts disabled
 void _kernel_main(void *bootParam)
 {
-	unsigned int i;
-	
-	thisSystem = bootParam;
-	init_phys_mem(thisSystem);
+	// First initialize RAM and enable paging
+	init_virt_mem(bootParam);
 
-	init_video();
-	//clrscr();
-	/*kprintf("kernel called with eax=%p\n", bootParam);
-	kprintf("*bootParam=0x%p\n", thisSystem, thisSystem);
-	kprintf("bootDrive=%d\n", thisSystem->bootDrive);
-	kprintf("bootFS=%d\n", thisSystem->bootFileSystem);
-	kprintf("*bootFATInfo=0x%p\n", thisSystem->bootFATinfo);
-	kprintf("kernelSize=%d\n", thisSystem->kernelSize);
-	kprintf("*cpuInfo=0x%p\n", thisSystem->cpuInfo);
-	kprintf("*memoryInfo=0x%p\n", thisSystem->memoryInfo);*/
-	//displayCPUInfo(thisSystem->cpuInfo);
+	// After paging enabled, update pointers
+	thisSystem = virt2Phys(bootParam);
+	bootParam = NULL;				// NULL our old one
 
-	// Initialize PICs
-	kprintf("Initializing:\n\tinterrupts...\n");
+	// Initialize console for stdout
+	init_console();
+	kprintf("initializing system:\nmemory ...\n");
+
+	// Display memory info
+	print_mem_info(thisSystem);
+	kprintf("  [ OK ]\n");
+
+	// Display video info
+	kprintf("video : ");
+	print_video_info();
+	kprintf("  [ OK ]\n");
+
+	// Initialize interrupts
+	kprintf("interrupts ...\n");
 	init_interrupts();
+	kprintf("  [ OK ]\n");
 
-	kprintf("\thardware...\n");
+	// Heap
+	kprintf("kernel heap ...\n");
+	init_heap();
+	//while (1);
+	kprintf("  [ OK ]\n");
+
+	// Hardware
+	kprintf("hardware ...\n");
 	init_pic();
 	init_timer();
 	init_keyboard();
-	
-	kprintf("\tvirtual memory...\n");
-	init_virt_mem();
-	print_mem_info();
-	
-	init_multitasker();
-	spawn_threads();
+	kprintf("  [ OK ]\n");
+
+	kprintf("scheduler ...\n");
+	init_multitasking();
+	kprintf("  [ OK ]\n");
+
+	//init_multitasker();
+	//spawn_threads();
 	//init_tasks();
-	
-	pointer = kmalloc(BUFFER_SIZE);
+
+	/* ok, so we can't use malloc here.
+	 * calling it returns 0xd0000000 for some reason
+	 * even though it's been called before, the heap
+	 * certainly is not empty. */
+	/*pointer = kmalloc(0x1000);
+	pointer = kmalloc(0x2880);
+	pointer = kmalloc(0x488);
+	kprintf("pointer=0x%p\n", pointer);*/
+
+	/*pointer = kmalloc(BUFFER_SIZE);
 	kprintf("pointer=0x%p\n", pointer);
 	for (i=0;i<BUFFER_SIZE>>2;i++) {
 		//kprintf("0x%p %d\t", &pointer[i], i);
 		pointer[i]=0;
 	}
-	kprintf("wrote to buffer successfully\n");
+	kprintf("wrote to buffer successfully\n");*/
 	//while(1);
-	
-/*	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
+
+	/*kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
 	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
 	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
 	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
 	kprintf("malloc(80000) = 0x%p\n", kmalloc(0x8000));*/
 
 	// Remap our PICs, set IRQ0 to 18Hz, enable only IRQs 0&1, and turn on interrupts
-	kprintf("Reprogramming timer and enabling IRQs...\nshell:~# ");
+	kprintf("Reprogramming timer and enabling IRQs...\n");
 
-	reprogram_timer(10);
-	enable_irq(0);
+	init_shell();
+	shell_prompt();
+
+	reprogram_timer(1000);
 	enable_irq(1);
+	enable_irq(0);
+	start_scheduler();
 	sti();
-	
+
 	//kill_thread();
+	//kprintf("\nPrepare idle...");
 	while(1) {
-			//kprintf("!");
+		//t1++;
+		//do_idle();
+		//yield();
+		//asm volatile("xchg bx, bx");
+		//asm volatile("int $0x20");
 	}
-	
+
 	//kprintf("\nmalloc(10000) = 0x%p\n", kmalloc(0x10000));
 	//__asm__ __volatile("int $0x80");
 
 	kprintf("kernel panic: exceution continuing beyond _kernel_main address space!");
+	while(1);
 }

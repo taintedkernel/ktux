@@ -42,12 +42,15 @@ typedef struct
 void blink(void);
 void scroll(console *con);
 void move_csr(void);
+unsigned short get_csr_x(void);
+unsigned short get_csr_y(void);
 void putch_help(console *con, unsigned c);
 void putch(unsigned c);
 void clrscr(console *con);
-void init_video(void);
+void init_console(void);
 void set_attrib(console *con, unsigned att);
 void select_vc(unsigned which_vc);
 void move_cursor(unsigned int x, unsigned int y);
+void print_video_info(void);
 
 #endif

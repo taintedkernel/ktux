@@ -14,6 +14,7 @@
 #define		PR_CA		0x02	/* use A-F instead of a-f for hex */
 #define		PR_SG		0x04	/* signed numeric conversion (%d vs. %u) */
 #define		PR_32		0x08	/* long (32-bit) numeric conversion */
+#define		PR_64		0x100	/* long long (64-bit) numeric conversion */
 #define		PR_16		0x10	/* short (16-bit) numeric conversion */
 #define		PR_WS		0x20	/* PR_SG set and num was < 0 */
 #define		PR_LZ		0x40	/* pad left with '0' instead of ' ' */
@@ -21,7 +22,8 @@
 
 /* largest number handled is 2^32-1, lowest radix handled is 8.
 2^32-1 in base 8 has 11 digits (add 5 for trailing NUL and for slop) */
-#define		PR_BUFLEN	16
+// Now we're doing 2^64, so double allocated space to 32 digits
+#define		PR_BUFLEN	32
 
 int do_printf(const char *fmt, va_list args, fnptr_t fn, void *ptr)
 {
@@ -93,6 +95,11 @@ int do_printf(const char *fmt, va_list args, fnptr_t fn, void *ptr)
 			}
 			if(*fmt == 'N')
 				break;
+			if(*fmt == 'L')
+			{
+				flags |= PR_64;
+				break;
+			}
 			if(*fmt == 'l')
 			{
 				flags |= PR_32;
@@ -133,6 +140,8 @@ int do_printf(const char *fmt, va_list args, fnptr_t fn, void *ptr)
 /* load the value to be printed. l=long=32 bits: */
 DO_NUM:				if(flags & PR_32)
 					num = va_arg(args, unsigned long);
+					else if(flags & PR_64)
+					num = va_arg(args, unsigned long long int);
 /* h=short=16 bits (signed or unsigned) */
 				else if(flags & PR_16)
 				{
@@ -247,6 +256,7 @@ EMIT2:				if((flags & PR_LJ) == 0)
 int kprintf_help(unsigned c, void **ptr)
 {
 	putch(c);
+	//ptr(c);
 	return 0;
 }
 

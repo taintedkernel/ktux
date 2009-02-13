@@ -75,6 +75,8 @@
 #define virt2Dir(addr)							( addr >> DIR_ADDR_SHIFT )		// Divide by 4mb
 #define virt2Page(addr)							(( addr >> TABLE_ADDR_SHIFT ) & TABLE_ADDR_MASK )		// Offset within a page
 #define virt2Map(addr)							(( addr >> DIR_ADDR_SHIFT << TABLE_ADDR_SHIFT ) + V_KERNEL_PAGE_TABLE_1 )
+#define bytes2KB(addr)							( addr >> 10 )
+
 //#define virt2PageTableDir(addr)					((( addr >> DIR_ADDR_SHIFT << TABLE_ADDR_SHIFT ) + V_KERNEL_PAGE_TABLE_1 ) >> DIR_ADDR_SHIFT )
 
 // page table entry macros
@@ -133,6 +135,10 @@
 #define ROMBIOS_SHADOW_MEM_END					0x000EFFFF
 #define MB_BIOS_RSVD_MEM_START					0x000F0000
 #define MB_BIOS_RSVD_MEM_END					0x000FFFFF
+
+#define MEM_E820_ADDRESS_MEMORY					0x01
+#define MEM_E820_ADDRESS_RSVD					0x02
+#define MEM_E820_END_MAP						0xDEADBEEF
 // end x86 stuff
 
 
@@ -145,9 +151,9 @@ typedef volatile struct
 
 
 // standard functions
-void print_mem_info(void);
-void init_phys_mem(systemInfo*);
-void init_virt_mem(void);
+void print_mem_info(systemInfo*);
+void init_virt_mem(systemInfo*);
+void init_heap(void);
 void page_fault_handler(unsigned int, unsigned int, unsigned int);
 
 // virtual memory management

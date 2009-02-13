@@ -24,16 +24,20 @@
 #define __KTUX_PROCESS_H
 
 #include <memory.h>
+#include <video.h>
 
 #define MAX_THREADS			10
+#define INT_PER_SLICE		32
 
 #define PATH_SIZE			256
 #define NAME_SIZE			64
-#define STACK_SIZE			4096
+#define STACK_SIZE			0x200
 
+// Process privledge
 #define THREAD_KERNEL		0
 #define THREAD_USER			1
 
+// Process status
 #define PROCESS_INIT		1
 #define PROCESS_READY		2
 #define PROCESS_RUN			3
@@ -44,7 +48,7 @@
 
 typedef volatile struct {
 	unsigned int link;
-	unsigned int esp0;
+	volatile unsigned int esp0;
 	unsigned int ss0;
 	unsigned int esp1;
 	unsigned int ss1;
@@ -95,43 +99,38 @@ typedef volatile struct
 
 typedef volatile struct
 {
-	unsigned int kstack;
-	unsigned int ustack;
-	unsigned int cr3;
 	char name[20];
 	unsigned int id;
+	int priority;
 	unsigned int status;
 	unsigned int priv;
-	char stack[STACK_SIZE];
-	char p10_stack[STACK_SIZE];
+	unsigned int esp0;
+	unsigned int esp3;
+	unsigned int cr3;
+	unsigned int time;
+	console *tty;
 } __attribute__ ((packed)) process_struct;
 
-void init_multitasker(void);
-unsigned int task_switch(unsigned int);
+typedef volatile struct
+{
+	unsigned int esp0;
+	unsigned int esp3;
+	unsigned int slice;
+	//unsigned int pid;
+} __attribute__ ((packed)) thread_struct;
 
-void spawn_threads(void);
+void init_multitasking();
+void create_thread(unsigned int, void (*)());
+unsigned int task_switch(unsigned int);
+void do_idle();
+void start_scheduler();
+
 unsigned int get_next_pid(void);
 unsigned int get_page_directory(unsigned int pid);
 unsigned int create_kernel_thread(char *, unsigned int, unsigned int, unsigned int, char);
 unsigned int create_user_thread(unsigned int, unsigned int);
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /*typedef volatile struct
 {

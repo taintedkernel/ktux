@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <process.h>
 #include <pic.h>
+#include <math.h>
 
 // Until paging enabled, use virtual pointers with our temporary GDT segments (base=0x40100000)
 unsigned int *kernelPageDirectory = (unsigned int *) phys2Virt(P_KERNEL_PAGE_DIRECTORY);
@@ -41,8 +42,8 @@ unsigned int freePageListEntries;
 
 unsigned int vKernelStartAddress = KERNEL_VIRT_ADDR;
 unsigned int vKernelEndAddress = KERNEL_VIRT_ADDR;
-unsigned int vKernelHeap = V_KERNEL_HEAP_ADDR;
-unsigned int numKernelPages = 0, numKernelTables = 0; 
+unsigned int vHeapMappedLimit = V_KERNEL_HEAP_ADDR;
+unsigned int numKernelPages = 0, numKernelTables = 0;
 unsigned int freeMemory = 0, usedMemory = 0;
 unsigned int pFreeMemoryStart = 0, pTotalMemory = 0;
 
@@ -64,30 +65,44 @@ static rsvd_mem_struct reservedX86Regions[] =
 };
 
 
-void print_mem_info(void)
+void print_mem_info(systemInfo *sysInfo)
 {
-	//int i;
-	
-	kprintf("total system memory: %u kb\n", pTotalMemory/1024);
-	kprintf("[pTotalMemory=%u freeMemory=%u, usedMemory=%u]\n", pTotalMemory, freeMemory, usedMemory);
-	kprintf("kernel loaded at 0x%p to 0x%p\n", vKernelStartAddress, vKernelEndAddress);
-	kprintf("freePageList=0x%p, freePageListSize=%u -> pFreeMemoryStart=0x%p\n", freePageList, freePageListSize, pFreeMemoryStart);
+	e820MemoryMap *e820Entry = sysInfo->memoryInfo;
+
+	kprintf("BIOS E820 memory map (0x%08X):\n", e820Entry);
+	while (e820Entry->base != MEM_E820_END_MAP)
+	{
+		kprintf("  0x%08X - 0x%08X ", (unsigned long)e820Entry->base,
+				max(e820Entry->base+e820Entry->length, 0xFFFFFFFF));
+		if (e820Entry->type == MEM_E820_ADDRESS_MEMORY)
+			kprintf("(avail)\n");
+		else
+			kprintf("(rsvd)\n");
+
+		e820Entry++;
+	}
+
+	kprintf("%ukb memory detected ", bytes2KB(pTotalMemory));
+	kprintf("(%ukb used/%ukb free)\n", bytes2KB(usedMemory), bytes2KB(freeMemory));
+	kprintf("virtual kernel memory map:\n");
+	kprintf("  .text : 0x%X - 0x%X\n", vKernelStartAddress, vKernelEndAddress);
+	kprintf("[dbg] freePageList : 0x%08X - size : 0x%X (%u)\n", freePageList, freePageListSize, freePageListSize);
+	kprintf("physical free memory start : 0x%08X\n", pFreeMemoryStart);
 	kprintf("memory manager initialized!\n");
+
 	/*kprintf("first 5 free pages:\n");
 	for (i=0; i<5; i++) {
 		kprintf("0x%p ", freePageList[i]);
 	}*/
 }
 
-void init_phys_mem(systemInfo *sysInfo)
+void init_virt_mem(systemInfo *sysInfo)
 {
 	unsigned int i=0, j=0, address;
 	unsigned int used, lastReservedRegion;
 
 	// Get total amount of system memory
 	pTotalMemory = sysInfo->totalMemory;
-
-	//kprintf("total memory: %u kb\n", pTotalMemory/1024);
 
 	// Mark end of kernel
 	vKernelEndAddress = sysInfo->kernelEnd;
@@ -96,12 +111,10 @@ void init_phys_mem(systemInfo *sysInfo)
 	freePageList = (unsigned int *) virt2Phys(vKernelEndAddress);
 	freePageListSize = pTotalMemory >> PAGING_ENTRY_SHIFT;		// 1/1024th of total RAM (total RAM / 4kb pages * 4 bytes/entry (unsigned int))
 
-	//kprintf("vKernelEnd=0x%p, freepageList=0x%p, size=0x%p\n", vKernelEndAddress, freePageList, freePageListSize);
+	//kprintf("[dbg] vKernelEnd=0x%p, freepageList=0x%p, size=0x%p\n", vKernelEndAddress, freePageList, freePageListSize);
 
 	// Calculate start of free memory
 	pFreeMemoryStart = virt2Phys(vKernelEndAddress) + freePageListSize;
-
-	//kprintf("pFreeMemoryStart=0x%p\n", pFreeMemoryStart);
 
 	/*** Map our page tables ***/
 	// Start off with lower 1mb, kernel code address space
@@ -132,7 +145,7 @@ void init_phys_mem(systemInfo *sysInfo)
 		//kernelPageTable[i++] = makePTEphys(address, (PDE_FLAG_PRESENT | PDE_FLAG_RW));		// Supervisor, read/write, present (011 b)
 		address += PAGE_SIZE;
 	}
-	
+
 	// Calculate number of kernel page tables needed/used
 	numKernelPages = i - 1;
 	numKernelTables = (i - 1) >> PAGING_ENTRY_SHIFT;
@@ -150,7 +163,7 @@ void init_phys_mem(systemInfo *sysInfo)
 	// Map all others not present
 
 	// First our lower 1mb
-	i=0; 
+	i=0;
 	setPDEindex(kernelPageDirectory, i++, P_PAGE_TABLE_FIRST_4MB, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 	//kernelPageDirectory[i++] = makePDEphys(P_PAGE_TABLE_FIRST_4MB, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 
@@ -159,7 +172,7 @@ void init_phys_mem(systemInfo *sysInfo)
 		setPDEindex(kernelPageDirectory, i++, 0, PDE_FLAG_RW);
 		//kernelPageDirectory[i++] = makePDEphys(0, PDE_FLAG_RW);
 	}
-	
+
 	// Map page tables for the kernel in the directory
 	map_ktables(kernelPageDirectory);
 
@@ -171,8 +184,6 @@ void init_phys_mem(systemInfo *sysInfo)
 	kernelPageTable = (unsigned int *) P_PAGE_TABLE_KERNEL_1;
 	lower4MBPageTable = (unsigned int *) P_PAGE_TABLE_FIRST_4MB;
 	//kernelTables = (unsigned int *) V_KERNEL_PAGE_TABLE_1;
-
-	//print_mem_info();
 
 	// Find number of entries in reserved region table
 	for (i=0; reservedX86Regions[i].end > 0; i++);
@@ -201,7 +212,7 @@ void init_phys_mem(systemInfo *sysInfo)
 		if (P_KERNEL_STACK_ADDR < address + KERNEL_STACK_SIZE - 1 &&
 			P_KERNEL_STACK_ADDR + KERNEL_STACK_SIZE - 1 > address)
 			{ continue; }
-		
+
 		// Scan list of reserved memory regions
 		if (address < reservedX86Regions[lastReservedRegion].end)
 		{
@@ -214,7 +225,7 @@ void init_phys_mem(systemInfo *sysInfo)
 		}
 
 		// Kernel page tables/directories
-		if (address < P_START_1MB_FREE_RAM) { continue; }		
+		if (address < P_START_1MB_FREE_RAM) { continue; }
 
 		// Add to list
 		if (used == 0) {
@@ -229,16 +240,16 @@ void init_phys_mem(systemInfo *sysInfo)
 	usedMemory = pTotalMemory - freeMemory;
 }
 
-void init_virt_mem()
+void init_heap()
 {
 	/* Initialize a kernel heap
-	 * 
+	 *
 	 * First set kernel page directory entry for virtual heap address to a
 	 * pre-reserved physical memory region for initial page table.
-	 * 
+	 *
 	 * This lies < 4mb, therefore is identity-mapped in memory for easy access.
 	 */
-	kprintf("init_virt_mem():\n");
+	kprintf("init_heap() : ");
 
 	// First, initialize dynamic memory //
 	// Create kernel page directory entry with our new initial 4mb heap table
@@ -249,75 +260,77 @@ void init_virt_mem()
 	// Address < 4mb, identity mapped -> physical = virtual
 	kernelHeapTable = (unsigned int *) P_PAGE_TABLE_HEAP_1;
 	setPTEindex(kernelHeapTable, 0, alloc_page(), (PDE_FLAG_PRESENT | PDE_FLAG_RW));
+	//kernelHeapEnd += PAGE_SIZE;
 	//kernelHeapTable[0] = makePTEphys(alloc_page(), (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 
-	kprintf("\tmapped heap table to 0x%p, first page mapped to physical 0x%p\n", kernelHeapTable, kernelHeapTable[0]);
+	kprintf("heap table mapped at 0x%X, page 0 mapped to physical 0x%X\n", kernelHeapTable, kernelHeapTable[0]);
 
 	// Keep a page table for our mapped page tables //
 	// Initialize page directory with new table at physical address P_MAPPED_PTABLE_1 (identity mapped 1st 4mb)
 	setPDEaddr(kernelPageDirectory, V_KERNEL_PAGE_TABLE_1, (unsigned int)kernelPageDirectory, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 
 /// check it
-/*	int i;
+/*	int i
 	unsigned int *tmp;
 	tmp = (unsigned int *)virt2Map(KERNEL_VIRT_ADDR);
 	for (i=0; i<10; i++)
 	kprintf("k:0x%p ", tmp[i]);
 	kprintf("\n");
-	
+
 	tmp = (unsigned int *)virt2Map(V_KERNEL_HEAP_ADDR);
 	for (i=0; i<10; i++)
-	kprintf("h:0x%p ", tmp[i]);	
+	kprintf("h:0x%p ", tmp[i]);
 	kprintf("\n");*/
-	
+
 	/*kernelMappedTables = (unsigned int *) P_MAPPED_PTABLE_1;
 	set_mapped_table_entry(0);
 	set_mapped_table_entry(KERNEL_VIRT_ADDR);
 	set_mapped_table_entry(V_KERNEL_HEAP_ADDR);*/
-}	
+}
 
 void page_fault_handler(unsigned int address, unsigned int errorCode, unsigned int eip)
 {
+	unsigned int debug=1;
 	unsigned int pageDir, *pageTable;
-	
+
 	pageDir = kernelPageDirectory[virt2Dir(address)];
 	pageTable = (unsigned int *)(pageDir & PDE_ADDR_MASK);
-	
-	kprintf("page fault: address=%p referenced at kernel EIP 0x%p\n", address, eip);
-	kprintf("  kernel page directory entry=0x%p\n", pageDir);
-	kprintf("  kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
-	
+
+	if (debug) kprintf("page fault: address=%p referenced at kernel EIP 0x%p\n", address, eip);
+	if (debug) kprintf("  kernel page directory entry=0x%p\n", pageDir);
+	if (debug) kprintf("  kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
+
 	if (errorCode & PDE_FLAG_PRESENT)
 	{
-		kprintf("  fault caused by page-level protection violation.  kill thread not implemented, halting\n");
+		if (debug) kprintf("  fault caused by page-level protection violation.  kill thread not implemented, halting\n");
 		while(1);
 	}
-		
+
 	if (address < KERNEL_VIRT_ADDR) {
-		kprintf("  address below kernel\n");
+		if (debug) kprintf("  address below kernel\n");
 	}
 	else if (address < V_KERNEL_HEAP_ADDR) {
-		kprintf("  address in kernel space!\n");
+		if (debug) kprintf("  address in kernel space!\n");
 	}
 	else if (address < V_KERNEL_DRIVER_HEAP) {
 		// Is request valid?  Must be below end of heap.
 		if (address < (unsigned int)kernelHeapEnd) {
 			//kprintf("write code to allocate and map new page here\n");
 			setPTEaddr(pageTable, address, alloc_page(), (PDE_FLAG_PRESENT | PDE_FLAG_RW));
-			
-			kprintf("  updated: kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
+
+			if (debug) kprintf("  updated: kernel page table @ 0x%p; page_table[0x%p]=0x%p\n", pageTable, virt2Page(address), pageTable[virt2Page(address)]);
 			return;
 		}
 		else {
-			kprintf("  heap request invalid.  kill thread.\n");
+			if (debug) kprintf("  heap request invalid.  kill thread.\n");
 			//KILL_THREAD
 		}
 	}
-	
+
 /*	if ((V_KERNEL_PAGE_TABLE_1 <= address) && (address < V_KERNEL_PAGE_TABLE_TABLE))
 	{
 	}*/
-	
+
 	while(1);
 }
 
@@ -330,18 +343,21 @@ void page_fault_handler(unsigned int address, unsigned int errorCode, unsigned i
 /* Ah, yes.  Can't have much of a memory manager without malloc() */
 void *kmalloc(unsigned int nbytes)
 {
-	static unsigned int freeBytes = PAGE_SIZE;
+	unsigned int debug = 1;
+	static unsigned int freeBytes = 0; //PAGE_SIZE;
 	//union align { double d; unsigned u; void (*f)(void); } align;
-	
-	kprintf("kmalloc(0x%p), currently free=0x%p\n", nbytes, freeBytes);
-	
-	//nbytes = (nbytes + 
+
+	if (debug) kprintf("[dbg] kmalloc(0x%X) : free=0x%X, heapEnd/Limit=0x%X/0x%X\n", nbytes, freeBytes, kernelHeapEnd, vHeapMappedLimit);
+
+	//nbytes = (nbytes +
 	if (nbytes <= freeBytes)
 	{
+		if (debug) kprintf("[dbg] kmalloc1.pre called\n");
 		void *p = kernelHeapEnd;
 		kernelHeapEnd += nbytes;
 		freeBytes -= nbytes;
-		kprintf("kmalloc1 returning 0x%p, ptr=0x%p, count=%d\n", p, kernelHeapEnd, freeBytes);
+		memsetd(p, 0, nbytes >> 2);
+		if (debug) kprintf("[dbg] kmalloc1.post return(0x%X) : heapEnd/Limit=0x%X/0x%X, freeBytes=%d\n", p, kernelHeapEnd, vHeapMappedLimit, freeBytes);
 		return p;
 	}
 	else if (nbytes > PAGE_SIZE)
@@ -350,17 +366,19 @@ void *kmalloc(unsigned int nbytes)
 		if (p == (void *)-1)
 			return 0;
 		kernelHeapEnd = (char*)(p + nbytes);
-		kprintf("kmalloc2 returning 0x%p, ptr=0x%p, count=%d\n", p, kernelHeapEnd, freeBytes);
+		memsetd(p, 0, nbytes >> 2);
+		if (debug) kprintf("[dbg] kmalloc2 return(0x%X) : heapEnd/Limit=0x%X/0x%X, freeBytes=%d\n", p, kernelHeapEnd, vHeapMappedLimit, freeBytes);
 		return p;
 	}
 	else
 	{
+		if (debug) kprintf("[dbg] kmalloc3.pre called\n");
 		void *p = sbrk(nbytes);
 		if (p == (void *)-1)
 			return 0;
-		freeBytes = PAGE_SIZE;
+		freeBytes += nbytes;
 		kernelHeapEnd = p;
-		kprintf("kmalloc3 calling for 0x%p, ptr=0x%p, count=%d\n", nbytes, kernelHeapEnd, freeBytes);
+		if (debug) kprintf("[dbg] kmalloc3->kmalloc(0x%X) : heapEnd/Limit=0x%X/0x%X, freeBytes=%d\n", nbytes, kernelHeapEnd, vHeapMappedLimit, freeBytes);
 		return (void *)kmalloc(nbytes);
 	}
 }
@@ -368,38 +386,38 @@ void *kmalloc(unsigned int nbytes)
 void *sbrk(unsigned int nbytes)
 {
 	void *p;
-	unsigned int i, free;
-	unsigned int tmpPage, tmpVirt;
-	
-	if ((vKernelHeap & (PAGE_SIZE - 1)) == 0)
+	static unsigned int i, free;
+	static unsigned int newHeapPage, newPageVirt;
+
+	unsigned int debug=1;
+
+	if ((vHeapMappedLimit & (PAGE_SIZE - 1)) == 0)
 		free = 0;
 	else
-		free = (vKernelHeap & ~(PAGE_SIZE - 1)) + PAGE_SIZE - vKernelHeap;
+		free = (vHeapMappedLimit & ~(PAGE_SIZE - 1)) + PAGE_SIZE - vHeapMappedLimit;
 
-	kprintf("sbrk(nbytes=0x%p), 0x%p avail before page boundry (vKernelHeap=0x%p)\n", nbytes, free, vKernelHeap);
+	if (debug) kprintf("[dbg] sbrk(0x%X) : 0x%X until EOP (heapMapLimit=0x%X)\n", nbytes, free, vHeapMappedLimit);
 
 	// TEST THROUGHLY
 	if (free < nbytes) {
 		i = 0;
 		while (free < nbytes) {
-			tmpPage = alloc_page();
-			tmpVirt = (vKernelHeap & ~(PAGE_SIZE-1)) + PAGE_SIZE*(i++);
-			
+			newHeapPage = alloc_page();
+			newPageVirt = (vHeapMappedLimit & ~(PAGE_SIZE-1)) + PAGE_SIZE*(i++);
+
 			//kprintf("calling map_kpage(0x%p, 0x%p)\n", tmpVirt, tmpPage);
-			map_page_helper(kernelPageDirectory, tmpVirt, tmpPage, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
-			
+			map_page_helper(kernelPageDirectory, newPageVirt, newHeapPage, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 			free += PAGE_SIZE;
-			
 		}
 	}
-	
-	p = (void *)vKernelHeap;
-	vKernelHeap += nbytes;
+
+	p = (void *)vHeapMappedLimit;
+	vHeapMappedLimit += nbytes;
 	free -= nbytes;
-	
-	kprintf("leaving sbrk(), vKernelHeap=0x%p, 0x%p available before page boundry\n", vKernelHeap, free);	
-	
-	return p; 
+
+	if (debug) kprintf("[dbg] sbrk return(0x%X) : heapMapLimit=0x%X, 0x%X until EOP\n", p, vHeapMappedLimit, free);
+
+	return p;
 }
 
 /*void set_mapped_table_entry(unsigned int virt)
@@ -411,7 +429,7 @@ void *sbrk(unsigned int nbytes)
 }*/
 
 /* void mapPage(unsigned int *pageDir, unsigned int phys, unsigned int virt, unsigned int flags)
- * 
+ *
  * This funtion takes one page (4k) of data at physical address 'phys' and
  * maps it to the page directory 'pageDir' at virtual address 'virt'.  If
  * the corresponding page table is not already present, a new one will be
@@ -431,12 +449,12 @@ void unmap_kpage(unsigned int virt)
 void unmap_page_helper(unsigned int *pageDir, unsigned int virt)
 {
 	unsigned int *pageTable;
-	
+
 	pageTable = (unsigned int *)(pageDir[virt2Dir(virt)] & PDE_ADDR_MASK);
 
 	pageTable[virt2Page(virt)] = makePTEphys(0, PDE_FLAG_RW);
 }
- 
+
 void map_kpage(unsigned int virt, unsigned int phys, unsigned int flags)
 {
 	map_page_helper(kernelPageDirectory, virt, phys, flags);
@@ -449,14 +467,15 @@ void map_kpage(unsigned int virt, unsigned int phys, unsigned int flags)
 
 void map_page_helper(unsigned int *pageDir, unsigned int virt, unsigned int phys, unsigned int flags)
 {
+	unsigned int debug=0;
 	unsigned int pageDirEntry;
 	unsigned int *pageTable;
 
 	pageDirEntry = pageDir[virt2Dir(virt)];
-	pageTable = (unsigned int *)virt2Map(virt);	
-	
-	kprintf("map_page_helper(page_dir=0x%p, virt=0x%p, phys=0x%p, flags=0x%p)\n", pageDir, virt, phys, flags);
-	kprintf("    page table @ 0x%p (w/flags), virtual @ 0x%p\n", pageDirEntry, pageTable);
+	pageTable = (unsigned int *)virt2Map(virt);
+
+	if (debug) kprintf("[dbg] map_page_helper(page_dir=0x%p, virt=0x%p, phys=0x%p, flags=0x%p)\n", pageDir, virt, phys, flags);
+	if (debug) kprintf("[dbg]     page table @ 0x%p (w/flags), virtual @ 0x%p\n", pageDirEntry, pageTable);
 
 	cli();
 
@@ -465,14 +484,14 @@ void map_page_helper(unsigned int *pageDir, unsigned int virt, unsigned int phys
 	{
 		pageTable = create_new_table(pageDir, virt);
 		pageDirEntry = pageDir[virt2Dir(virt)];
-		
+
 /*		// Temporarily map new table to virt
 		map_page_helper(pageDir, virt, pageTable, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 		pageTable = (unsigned int *)virt;
 		pageTable[virt2Page(virt)] = makePTEphys(alloc_page(), flags);
 */
-		kprintf("created new table @ 0x%p for virt 0x%p\n", pageTable, virt);
-		kprintf("new pageDirEntry=0x%p\n", pageDirEntry);
+		if (debug) kprintf("[dbg] created new table @ 0x%p for virt 0x%p\n", pageTable, virt);
+		if (debug) kprintf("[dbg] new pageDirEntry=0x%p\n", pageDirEntry);
 		map_page_helper(pageDir, virt, phys, flags);
 	}
 	else
@@ -483,9 +502,9 @@ void map_page_helper(unsigned int *pageDir, unsigned int virt, unsigned int phys
 		}*/
 		setPTEaddr(pageTable, virt, phys, flags);
 		//pageTable[virt2Page(virt)] = makePTEphys(phys, flags);
-	
+
 		if (pageDir == (unsigned int *)P_KERNEL_PAGE_DIRECTORY)
-			invalidate(virt);		
+			invalidate(virt);
 	}
 
 	sti();
@@ -496,12 +515,12 @@ void map_page_range(unsigned int *pageDir, unsigned int virt, unsigned int phys,
 {
 	unsigned int currentPage;
 	unsigned int numPages = size >> PAGE_SIZE_SHIFT;
-	
+
 	if ((size & 0xFFF) != 0)
 		return;
-	
+
 	for (currentPage=0; currentPage<numPages; currentPage++) {
-		map_page_helper(pageDir, virt+(currentPage << PAGE_SIZE_SHIFT), 
+		map_page_helper(pageDir, virt+(currentPage << PAGE_SIZE_SHIFT),
 			phys+(currentPage << PAGE_SIZE_SHIFT), flags);
 	}
 }
@@ -527,18 +546,18 @@ void map_ktables(unsigned int *pageDir)
 unsigned int *create_new_table(unsigned int *pageDir, unsigned int virt)
 {
 	unsigned int *pageTableP, *pageTableV;
-	
+
 	pageTableP = (unsigned int *)alloc_page();
 	pageTableV = (unsigned int *)virt2Map(virt);
-	
+
 	kprintf("alloc new pageTable at 0x%p for virt 0x%p\n", pageTableP, virt);
 	kprintf("virt2PageTable(0x%p)=0x%p\n", virt, pageTableV);
-	
+
 	// Update page directory with new table
 	setPTEaddr(pageDir, virt, (unsigned int)pageTableP, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 	//pageDir[virt2Dir(virt)] = makePDEphys((unsigned int)pageTableP, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 	//pageDir[virt2PageTableDir(virt)] = makePDEphys((unsigned int)pageTableP, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
-	
+
 /*		// Temporarily map new table to virt
 		map_page_helper(pageDir, virt, pageTable, (PDE_FLAG_PRESENT | PDE_FLAG_RW));
 		pageTable = (unsigned int *)virt;
@@ -554,13 +573,13 @@ unsigned int *create_new_table(unsigned int *pageDir, unsigned int virt)
 /*
 void *mem heap lo(void) {
 }
- 
+
 void *mem heap hi(void) {
 }
- 
+
 size t mem heapsize(void) {
 }
- 
+
 size t mem pagesize(void) {
 }
 */
@@ -585,7 +604,7 @@ unsigned int alloc_page()
 
 	if (freePageListEntries == 0)
 		return 0;
-	
+
 	address = freePageList[freePageListEntries];
 
 	//kprintf("alloc_page(): returned 0x%p (%d), entries=%d\n", address, address, freePageListEntries);
@@ -608,17 +627,17 @@ unsigned int free_page(unsigned int address)
 	// implement error
 	if ((address & 0xFFF) != 0)
 		return -1;
-	
-	// implement error/bounds checking
+
+	// *TODO* : Implement error/bounds checking
 	freePageList[freePageListEntries++] = address;
-	
+
 	return 0;
 }
 
 void dumpFreePageList(unsigned int start, unsigned int count)
 {
 	unsigned int i;
-	
+
 	for (i=start; i<start+count; i++) {
 		kprintf("freePageList[%d]=0x%p\n", i, freePageList[i]);
 	}

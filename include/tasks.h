@@ -18,64 +18,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// timer.c - 8253 driver
+// process.h
 
-#include <ktux.h>
-#include <timer.h>
-#include <interrupts.h>
+#ifndef __KTUX_TASKS_H
+#define __KTUX_TASKS_H
 
-// dependencies
-#include <io.h>
-#include <stdio.h>
-#include <video.h>
+static int write(unsigned char *);
+//static int write(const unsigned char *, unsigned);
+void thread_one(void);
+void thread_two(void);
+void thread_monitor(void);
+void one_main(void);
+void two_main(void);
+void one_loop(void);
+void two_loop(void);
 
-
-static long int tick = 0;
-//static unsigned long *oldeip = (void *)0;
-
-/*static ktuxTimerDriver timerDriver;
-static ktuxStdDriverBase timerDriverBase = {
-	false,						// Driver initialized (always default to false)
-	true,						// Driver implements IRQ?
-	init_timerialize,			// InitDriver() function pointer
-	TimerIRQHandler				// HandleIRQ() function pointer
-};
-
-int TimerDriverInitialize(void)
-{
-	// Our basic driver init function
-	timerDriver.driverBase = &timerDriverBase;
-
-	// Register driver with kernel
-	ktuxRegisterDriver(TIMER_DRIVER, &timerDriver);
-
-	// Driver init flag = true
-	timerDriver.driverBase->driverInitialized = true;
-
-	return 0;
-}*/
-
-int init_timer(void)
-{
-	return 0;
-}
-
-unsigned int TimerIRQHandler(unsigned int oldESP)
-{
-	tick++;
-	putch('.');
-	return oldESP;
-}
-
-void reprogram_timer(unsigned int freq)
-{
-/* I can remember the NTSC TV color burst frequency, but not the PC
-peripheral clock. Fortunately, they are related: */
-	unsigned short foo = (3579545L / 3) / freq;
-/**/
-
-/* reprogram the 8253 timer chip to run at 'HZ', instead of 18 Hz */
-	outportb(0x43, 0x36);	/* channel 0, LSB/MSB, mode 3, binary */
-	outportb(0x40, foo & 0xFF);	/* LSB */
-	outportb(0x40, foo >> 8);	/* MSB */
-}
+#endif

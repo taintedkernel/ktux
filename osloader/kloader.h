@@ -90,7 +90,7 @@
 %define CPU_Pentium						0x4000			; Pentium (or equilivent) or better
 
 ; Other CPU related constants
-%define CPU_TSC_TICKCOUNT				91
+%define CPU_TSC_TICKCOUNT				2
 
 ;**********************************************
 
@@ -109,7 +109,7 @@
 %define FAT_END_OF_CLUSTER				0x0FF8
 
 %define START_CLUSTER					2
-	
+
 ;**********************************************
 
 ; Executable file information

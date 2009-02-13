@@ -20,19 +20,19 @@
 
 # Makefile for Ktux osloader
 
-STDDEPEND	= kloader.h Makefile
-BINUTILS	= /usr/cross/bin
-INCDIR		= ../include
-#LDSCRIPT	= loader.ld
-AS		= nasm
-CC		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -I$(INCDIR)
-LD		= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
-OBJDUMP		= ${BINUTILS}/i686-elf-objdump
-OBJCOPY		= ${BINUTILS}/i686-elf-objcopy
-NM		= ${BINUTILS}/i686-elf-nm
-LINKOPTS	= -m486 -Wl,-warn-common,-X,--oformat,elf32-i386,-e,kloaderMain,-Ttext,0x00008000
+STDDEPEND		= kloader.h Makefile
+BINUTILS		= /usr/cross/bin
+INCDIR			= ../include
+#LDSCRIPT		= loader.ld
+AS				= nasm
+CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -I$(INCDIR)
+LD				= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
+OBJDUMP			= ${BINUTILS}/i686-elf-objdump
+OBJCOPY			= ${BINUTILS}/i686-elf-objcopy
+NM				= ${BINUTILS}/i686-elf-nm
+LINKOPTS		= -m486 -Wl,-warn-common,-X,--oformat,elf32-i386,-e,kloaderMain,-Ttext,0x00008000
 BOOTSTUBOBJS	= klMain.o klConsoleIO.o klLoadKernel.o klHardware.o
-HEADERS		= $(INCDIR)/interrupts.h $(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/ktux.h $(INCDIR)/stdio.h \
+#HEADERS			= $(INCDIR)/interrupts.h $(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/ktux.h $(INCDIR)/stdio.h \
 #			$(INCDIR)/vga.h $(INCDIR)/video.h $(INCDIR)/keyboard.h $(INCDIR)/timer.h $(INCDIR)/pic.h
 
 ##############

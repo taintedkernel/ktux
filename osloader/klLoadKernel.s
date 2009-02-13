@@ -22,13 +22,13 @@
 	GLOBAL kloaderLoadKernel
 
 ; Global variables (data) this file provides
-	;GLOBAL 
+	;GLOBAL
 
 ; External functions this source file accesses
 	EXTERN kloaderFatalError
 	EXTERN kloaderPrintString
 	EXTERN kloaderPrintCrLf
-	
+
 ; External variables this source file accesses
 	EXTERN dataSel
 	EXTERN SectorsPerTrack
@@ -40,13 +40,13 @@
 	EXTERN SectorsPerCluster
 	EXTERN SectorsPerFAT
 	EXTERN ReservedSectorCount
-	
-	
+
+
 	[BITS 16]
 	SECTION .text
 
 	%include "kloader.h"
-	
+
 ; Standard C calling convention
 kloaderLoadKernel:
 
@@ -66,7 +66,7 @@ kloaderLoadKernel:
 	xor	ah, ah
 	int	0x13
 	or	ah, ah
-	jnz	.resetDrive	
+	jnz	.resetDrive
 
 	; Compute volume info and load root directory into memory
 	call	computeVolumeInfo
@@ -84,11 +84,11 @@ kloaderLoadKernel:
 	mov	si, msgLoadRootDirError
 	call	kloaderPrintString
 	call	kloaderPrintCrLf
-	
+
 	; Return -1 (failure)
 	mov	dword [ss:(bp+16)], ERR_LOAD_ROOT
 	jmp	.done
-	
+
 .searchFile:
 	; Update progress
 	mov	dx, TEXT_WHITE
@@ -99,24 +99,24 @@ kloaderLoadKernel:
 	push	word [ss:(bp+22)]
 	call	findFile
 	add	sp, 0x02
-	
+
 	; Did we find the file?
 	cmp	ax, 0
 	jge	.loadFAT
 
 	; Update progress (error)
-	mov	dx, TEXT_WHITE	
+	mov	dx, TEXT_WHITE
 	mov	si, msgError
 	call	kloaderPrintString
 	call	kloaderPrintCrLf
 	mov	si, msgLoadFindError
 	call	kloaderPrintString
 	call	kloaderPrintCrLf
-	
+
 	; Couldn't find file, return -2
 	mov	dword [ss:(bp+16)], ERR_NO_FILE
 	jmp	.done
-	
+
 .loadFAT:
 	; Update progress
 	push	ax								; Save starting cluster of file
@@ -139,25 +139,25 @@ kloaderLoadKernel:
 	mov	si, msgLoadFATError
 	call	kloaderPrintString
 	call	kloaderPrintCrLf
-	
+
 	; Failed to load FAT, return -3
 	mov	dword [ss:(bp+16)], ERR_LOAD_FAT
 	jmp .done
-	
+
 .loadFile:
 	; Update progress
 	mov	dx, TEXT_WHITE
 	mov	si, msgDot
 	call	kloaderPrintString
 
-	; Pass starting cluster of file, memory 
+	; Pass starting cluster of file, memory
 	; destination address and load the kernel
 	pop	ax									; Get starting cluster saved earlier
 	push	dword [pKernelAddress]			; 2nd param - kernel destination
 	push	ax								; 1st param - staring cluster
 	call	loadFile
 	add	sp, 0x06
-	
+
 	; Successful?
 	cmp	ax, 0
 	jge	.checkKernel
@@ -183,12 +183,12 @@ kloaderLoadKernel:
 
 	; Check the kernel ELF header
 	call	parseELFHeader
-	
+
 	; Successful?
 	cmp	ax, 0
 	jge	.prepareKernel
 	push	eax								; Save parseELFHeader() error return code
-	
+
 	; Update progress
 	mov	dx, TEXT_WHITE
 	mov	si, msgError
@@ -201,7 +201,7 @@ kloaderLoadKernel:
 	pop	eax									; Return error code from parseELFHeader()
 	mov	dword [ss:(bp+16)], eax
 	jmp	.done
-	
+
 .prepareKernel:
 	mov	dword [kernelEnd], eax
 
@@ -212,12 +212,12 @@ kloaderLoadKernel:
 
 	; Modify kernel image in memory
 	call	prepareKernel
-	
+
 	; Successful?
 	cmp	ax, 0
 	jge	.success
 	;push	ax								; Save parseELFHeader() error return code
-	
+
 	; Update progress
 	mov	dx, TEXT_WHITE
 	mov	si, msgError
@@ -231,7 +231,7 @@ kloaderLoadKernel:
 .success:
 	mov	eax, dword [kernelEnd]
 	mov	dword [ss:(bp+16)], eax
-	
+
 .done:
 	popa
 	xor	eax, eax
@@ -239,7 +239,7 @@ kloaderLoadKernel:
 	ret
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; computeVolumeInfo:
 ;	Calculates filesystem constants based upon our current
 ;	volume and allocates a buffer for our cluster data
@@ -248,21 +248,21 @@ kloaderLoadKernel:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 computeVolumeInfo:
 	pusha
-	
+
 	; Calculate size of root directory in sectors
 	mov	ax, FAT_ROOTDIR_ENTRYSIZE
 	mul	word [MaxRootDirEntryCount]
 	xor	dx, dx
 	div	word [BytesPerSector]
 	mov	word [RootDirSectorCount], ax
-	
+
 	; Calculate bytes per cluster
 	mov	ax, word [BytesPerSector]
 	xor	bx, bx
 	mov	bl, byte [SectorsPerCluster]
 	mul	bx
 	mov	word [BytesPerCluster], ax
-	
+
 	; Store cluster data after the FAT
 	xor	eax, eax
 	mov	ax, word [SectorsPerFAT]
@@ -270,7 +270,7 @@ computeVolumeInfo:
 	add	eax, FAT_BUFFER
 	shr	eax, 4
 	mov	word [ClusterBuffer], ax
-	
+
 	popa
 	ret
 
@@ -280,23 +280,23 @@ computeVolumeInfo:
 ; Standard C calling convention
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 loadRootDirectory:
-	
+
 	; Save 2 bytes for return value
 	sub	sp, 0x02
-	
+
 	pusha
 	mov	bp, sp
-	
+
 	; Calculate start of root directory
 	mov	ax, word [ReservedSectorCount]		; Bootsector
 	add	ax, word [SectorsPerFAT]			; FAT
 	add	ax, word [SectorsPerFAT]			; Redundant FAT copy
-	
+
 	call LBA2CHS
-	
+
 	; Count read attempts
 	push	word 0
-	
+
 .readAttempt:
 	push	es
 	mov	ax, word TO_SEGMENT(ROOTDIR_BUFFER)
@@ -310,32 +310,32 @@ loadRootDirectory:
 	mov	ah, 0x02
 	int	0x13
 	jnc	.rootDirLoaded
-	
+
 	pop	es
-	
+
 	; Reset disk controller
 	xor	ah, ah
 	mov	dx, word [bootDrive]
 	int	0x13
-	
+
 	; Increment counter and try again
 	pop	ax
 	inc	ax
 	push	ax
 	cmp	ax, 0x05
 	jnae	.readAttempt
-	
+
 .fail:
 	add	sp, 0x02							; Remove read attempt counter
 	call	kloaderDiskError
 	mov	word [ss:(bp+16)], -1				; Return -1 (failure)
 	jmp	.done
-	
+
 .rootDirLoaded:
 	pop	es
 	add	sp, 0x02							; Remove read attempt counter
 	mov	word [ss:(bp+16)], 0				; Return 0 (success)
-	
+
 .done:
 	popa
 	xor	eax, eax
@@ -353,19 +353,19 @@ findFile:
 
 	; Save 2 bytes for return value
 	sub	sp, 0x02
-	
+
 	pusha
 	mov	bp, sp
-	
+
 	; Initialize index
 	mov	word [CurrentDirEntry], 0
-	
+
 	;mov	si, word [ss:(bp+20)]
-	
+
 	push	es
 	mov	ax, word TO_SEGMENT(ROOTDIR_BUFFER)
 	mov	es, ax
-	
+
 	; Grab entry from root directory
 .entryLoop:
 	mov	si, word [ss:(bp+20)]				; Filename pushed onto stack
@@ -375,8 +375,8 @@ findFile:
 	je	.nextFile
 	cmp	al, 0x0								; No more entries
 	je	.file404
-	
-	; Compare filenames	
+
+	; Compare filenames
 .checkLetter:
 	cld
 	mov	di, word [CurrentDirEntry]
@@ -385,28 +385,28 @@ findFile:
 	jne	.nextFile
 	jmp	.foundFile
 
-	; Increment index and check next entry	
+	; Increment index and check next entry
 .nextFile:
 	add	word [CurrentDirEntry], FAT_ROOTDIR_ENTRYSIZE
-	
+
 	; Make sure we're not at end of directory
 	mov	ax, word [BytesPerSector]
 	mul	word [RootDirSectorCount]
 	cmp	word [CurrentDirEntry], AX
 	jae	.file404
 	jmp	.entryLoop
-	
+
 .file404:
 	pop	es
 	mov	word [ss:(bp+16)], -1
 	jmp	.done
-	
+
 .foundFile:
 	mov	bx, word [CurrentDirEntry]
 	add	bx, FAT_ROOTENTRY_START_CLUSTER
 	mov	ax, word [es:bx]
 	mov	word [ss:(bp+16)], ax				; Save starting cluster
-	
+
 	; Save size of file
 	mov	bx, word [CurrentDirEntry]
 	add	bx, FAT_ROOTENTRY_FILESIZE
@@ -420,7 +420,7 @@ findFile:
 .noRound:
 	mov	word [FileSize], ax
 	pop	es
-	
+
 .done:
 	popa
 	xor	eax, eax
@@ -435,7 +435,7 @@ loadFAT:
 
 	; Save 2 bytes for return value
 	sub	sp, 0x2
-	
+
 	pusha
 	mov	bp, sp
 
@@ -445,7 +445,7 @@ loadFAT:
 
 	; Count read attempts
 	push	word 0
-	
+
 .readFAT:
 	push	es
 	mov	ax, word TO_SEGMENT(FAT_BUFFER)
@@ -459,14 +459,14 @@ loadFAT:
 	mov	ah, 0x02
 	int	0x13
 	jnc	.success
-	
+
 	pop	es
-	
+
 	; Reset and try 4 more times
 	xor	ah, ah
 	mov	dx, word [bootDrive]
 	int	0x13
-	
+
 	; Increment counter
 	pop	ax
 	inc	ax
@@ -479,12 +479,12 @@ loadFAT:
 	call	kloaderDiskError
 	mov	word [ss:(bp+16)], -1				; Return failure
 	jmp	.done
-	
+
 .success:
 	pop	es
 	add	sp, 0x02							; Remove counter
 	mov	word [ss:(bp+16)], 0				; Return success
-	
+
 .done:
 	popa
 	xor	eax, eax
@@ -503,33 +503,33 @@ loadFile:
 
 	; Save 2 bytes for return value
 	sub	sp, 0x2
-	
+
 	pusha
 	mov	bp, sp
 
-	mov	word [BytesRead], 0
+	mov	dword [BytesRead], 0
 	;mov	word [OldProgress], 0
-	
+
 	; Load starting cluster
 	mov	ax, word [ss:(bp+20)]
 	mov	word [NextCluster], ax
-	
+
 	; Initialize memory pointer
 	mov eax, dword [ss:(bp+22)]
 	mov	dword [MemoryPointer], eax
-	
+
 	push	es
-	
+
 	; Track read attempts
 .FATloop:
 	push	word 0
-	
+
 	; Get next cluster
 .readAttempt:
 	mov	ax, word [NextCluster]
 	call	cluster2Logical
 	call	LBA2CHS
-	
+
 	; Read cluster from disk
 	mov	es, word [ClusterBuffer]
 	xor	bx, bx
@@ -541,46 +541,50 @@ loadFile:
 	mov	ah, 0x02
 	int	0x13
 	jnc	.gotCluster
-	
+
 	; Failed, reset drive and try again
 	mov	si, msgError
-	mov	dx, TEXT_WHITE 
+	mov	dx, TEXT_WHITE
 	call	kloaderPrintString
 
 	mov	ah, 0x0
 	mov	dx, word [bootDrive]
 	int	0x13
-	
+
 	; Up to 5 times
 	pop	ax
 	inc	ax
 	push	ax
 	cmp	al, 0x05
 	jnae	.readAttempt
-	
+
 .fail:
 	add	sp, 0x02							; Remove counter
 	call	kloaderDiskError
 	mov	word [ss:(bp+16)], -1
 	jmp	.done
-	
+
 .gotCluster:
 	add	sp, 0x02							; Remove counter
-	
+
 	; Update number of bytes read
-	mov	ax, word [BytesRead]
+	mov	eax, dword [BytesRead]
 	add	ax, word [BytesPerCluster]
-	mov	word [BytesRead], ax
-	
-	; Update progress [temporary hack]
-	mov	si, msgR
+	mov	dword [BytesRead], eax
+	and	eax, 0x1000
+	;test	ax
+	jne	.noProgress
+
+	; Update progress
+	mov	si, msgDot
 	mov	dx, TEXT_WHITE
 	call	kloaderPrintString
-	
+
 	; Move our loaded cluster data into memory buffer
 	; Do this through "big real mode"
-	
+
 	; Go to protected mode temporarily
+.noProgress:
 	cli
 	mov	eax, cr0
 	or	al, 1
@@ -621,42 +625,37 @@ loadFile:
 	mov	ax, word [BytesPerCluster]
 	add	dword [MemoryPointer], eax			; Update memory pointer
 
-	; Update progress [temporary hack]
-	mov	si, msgC
-	mov	dx, TEXT_WHITE
-	call	kloaderPrintString
-
 	; Point to FAT buffer again to read next cluster
 	mov	ax, word TO_SEGMENT(FAT_BUFFER)
 	mov	es, ax
 	mov	ax, word [NextCluster]
 	mov	bx, FAT_NYBBLES_PER_ENTRY
 	mul bx
-	
+
 	mov	bx, ax
 	shr	bx, 1
-	
+
 	; CF set?  Mask value in AX if needed
 	jnc .mask
-	
+
 	mov	ax, word [es:bx]
 	shr	ax, 4
 	jmp	.doneConvert
-	
+
 .mask:
 	mov	ax, word [es:bx]
 	and	ax, 0x0FFF
-	
+
 .doneConvert:
 	cmp	ax, FAT_END_OF_CLUSTER
 	jae	.success
-	
+
 	mov	word [NextCluster], ax
 	jmp	.FATloop
-	
+
 .success:
 	mov	word [ss:(bp+16)], 0
-	
+
 .done:
 	pop	es
 	popa
@@ -669,41 +668,41 @@ loadFile:
 ; parseELFHeader: Parses kernel ELF header and saves relevant information
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 parseELFHeader:
-	
+
 	; Save 4 bytes for return value
 	sub	sp, 0x4
-	
+
 	pusha
 	mov	bp, sp
-	
+
 	; Go to big-real mode or whatever it's called
-	
+
 	; Go to protected mode
 	cli
 	mov	eax, cr0
 	or	al, 0x01
 	mov	cr0, eax
-	
+
 	; Load GS with global data segment selector
 	mov	eax, dataSel
 	mov	gs, ax
-	
+
 	; Back to real mode
 	mov	eax, cr0
 	and	al, 0xFE
 	mov	cr0, eax
 	sti
-	
+
 	; Check for magic ELF number
 	mov	esi, [pKernelAddress]
 	mov	eax, dword [gs:esi]
 	cmp	eax, ELF_MAGIC_NUMBER
 	je	.isValidELF
-	
+
 	; Error: Not an ELF binary
 	mov	dword [ss:(bp+16)], ERR_INVALID_ELF
 	jmp	.done
-	
+
 	; Make sure it's an executable ELF binary
 .isValidELF:
 	mov	esi, [pKernelAddress]
@@ -714,22 +713,22 @@ parseELFHeader:
 	; Error: Not an executable ELF binary
 	mov	dword [ss:(bp+16)], ERR_NOT_EXEC_ELF
 	jmp	.done
-	
+
 	; OK.  Now parse header.  Gather entry point, program & section tables
 	; header offset and size and number of entries in section table
 .isExecutable:
 	mov	esi, [pKernelAddress]
 	mov	eax, dword [gs:(esi+ELF_ENTRY_POINT)]
 	mov	dword [kernelEntryPoint], eax
-	
+
 	mov	esi, [pKernelAddress]
 	mov	eax, dword [gs:(esi+ELF_PROGRAM_HEADER)]
 	mov	dword [elfProgramHeader], eax
-	
+
 	;mov	esi, [pKernelAddress]
 	;mov	eax, dword [gs:(esi+ELF_SECTION_HEADER)]
 	;mov	dword [elfSectionHeader], eax
-	;	
+	;
 	;mov	esi, [pKernelAddress]
 	;xor	eax, eax
 	;mov	ax, word [gs:(esi+ELF_SH_ENTRY_SIZE)]
@@ -745,7 +744,7 @@ parseELFHeader:
 	mov	eax, dword [gs:(esi+ELF_NUM_SEGMENTS)]
 	cmp	ax, 0x2
 	je	.parseHeader
-	
+
 	; Error: Kernel image does not have exactly 2 ELF segments
 	mov	dword [ss:(bp+16)], ERR_NUM_SEGMENTS
 	jmp	.done
@@ -753,10 +752,10 @@ parseELFHeader:
 .parseHeader:
 	mov	esi, [pKernelAddress]
 	add	esi, dword [elfProgramHeader]
-	
+
 	; Skip segment type
 	add	esi, 0x4
-	
+
 	mov	eax, dword [gs:esi]
 	mov	dword [kernelCodeOffset], eax
 	add	esi, 0x4
@@ -773,35 +772,35 @@ parseELFHeader:
 	mov	eax, dword [gs:esi]
 	cmp	eax, [kernelCodeFileSize]
 	je	.codeSegmentOK
-	
+
 	; Error: Kernel image does not look way we anticipate
 	mov	dword [ss:(bp+16)], ERR_SEGMENT_LAYOUT
 	jmp	.done
-	
+
 	; Skip flags, check alignment (must equal PAGE_SIZE)
 .codeSegmentOK:
 	add	esi, 0x8
 	mov	eax, dword [gs:esi]
 	cmp	eax, PAGE_SIZE
 	je	.dataSegment
-	
+
 	; Error: Kernel image segment alignment invalid
 	mov	dword [ss:(bp+16)], ERR_SEGMENT_ALIGN
 	jmp	.done
-	
+
 	; Now we do the data segment.  Skip segment type.
 .dataSegment:
 	add	esi, 0x8
-	
+
 	mov	eax, dword [gs:esi]
 	mov	dword [kernelDataOffset], eax
 	add	esi, 0x4
 	mov	eax, dword [gs:esi]
 	mov	dword [kernelDataVirtAddress], eax
-	
+
 	; Skip physical address
 	add	esi, 0x8
-	
+
 	mov	eax, dword [gs:esi]
 	mov	dword [kernelDataFileSize], eax
 	add	esi, 0x4
@@ -810,12 +809,12 @@ parseELFHeader:
 
 	; Skip flags
 	add	esi, 0x8
-	
+
 	; Check alignment
 	mov	eax, dword [gs:esi]
 	cmp	eax, PAGE_SIZE
 	je	.calcKernelSize
-	
+
 	; Error: Kernel image segment alignment invalid
 	mov	dword [ss:(bp+16)], ERR_SEGMENT_ALIGN
 	jmp	.done
@@ -823,8 +822,8 @@ parseELFHeader:
 .calcKernelSize:
 	mov	eax, dword [kernelDataVirtAddress]
 	add	eax, dword [kernelDataMemSize]
-	
-	
+
+
 ;	; Now we try to calculate the total size in memory of the allocated
 ;	; kernel image.  Must determine at runtime, as a BSS section is present
 ;	; in the symbol table, but not in the file executable.  Need to implicitly
@@ -855,11 +854,11 @@ parseELFHeader:
 ;	dec	cx
 ;	cmp	cx, 0x0
 ;	jne	.sectionLoop
-;	
+;
 ;	; Error: Cannot find an entry without SHF_ALLOC
 ;	mov	dword [ss:(bp+16)], ERR_ALL_ALLOC
 ;	jmp	.done
-;	
+;
 ;	; We found the first entry without SHF_ALLOC.
 ;	; Start of this section will be the end of our kernel.
 ;.foundFirstNoAlloc:
@@ -885,7 +884,7 @@ prepareKernel:
 
 	; Save 2 bytes for return
 	sub	sp, 0x2
-	
+
 	; Save regs
 	pusha
 	mov	bp, sp
@@ -903,11 +902,11 @@ prepareKernel:
 	mov	byte [gs:edi], al
 	inc	esi
 	inc	edi
-	
+
 	dec	ecx
 	cmp	ecx, 0
 	jne	.moveCodeSegment
-	
+
 	; Do same for data segment.  Ensure difference b/w code & data
 	; virtual addresses is same as difference b/w offsets in file.
 	mov	eax, dword [kernelDataVirtAddress]
@@ -925,17 +924,17 @@ prepareKernel:
 	sub	edi, dword [kernelCodeVirtAddress]
 	mov	dword [kernelDataOffset], edi		; Update data offset
 	add	edi, dword [pKernelAddress]
-	
+
 .moveDataSegment:
 	mov	al, byte [gs:esi]
 	mov	byte [gs:edi], al
 	inc	esi
 	inc	edi
-	
+
 	dec	ecx
 	cmp	ecx, 0
 	jne	.moveDataSegment
-	
+
 	; Zero new memory range for difference b/w size in
 	; memory and file of data segment
 .dataSegmentOK:
@@ -944,7 +943,7 @@ prepareKernel:
 	mov	edi, dword [pKernelAddress]
 	add	edi, dword [kernelDataOffset]
 	add	edi, dword [kernelDataFileSize]
-	
+
 .zeroLoop:
 	mov	byte [gs:edi], 0
 	inc	edi
@@ -954,7 +953,7 @@ prepareKernel:
 
 .success:
 	mov	word [ss:(bp+16)], 0
-	
+
 .done:
 	popa
 	xor	eax, eax
@@ -969,27 +968,27 @@ prepareKernel:
 ; Input: AX=cluster number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 cluster2Logical:
-	
+
 	; Save 2 bytes for return code
 	sub	sp, 0x2
-	
+
 	pusha
 	mov	bp, sp
-	
+
 	; Cluster numbering starts at 2
 	sub	ax, 0x2
-	
+
 	; Multiply by sectors per cluster
 	;xor	bx, bx
 	mov	bl, byte [SectorsPerCluster]
 	mul	bl
-	
+
 	; Calculate start of data clusters
 	add	ax, word [ReservedSectorCount]		; Bootsector
 	add	ax, word [SectorsPerFAT]			; FAT
 	add	ax, word [SectorsPerFAT]			; Redundant FAT copy
 	add	ax, word [RootDirSectorCount]
-	
+
 	; Return value
 	mov	word [ss:(bp+16)], ax
 
@@ -1056,7 +1055,7 @@ BytesPerCluster			dw 0
 ClusterBuffer			dw 0
 CurrentDirEntry			dw 0
 FileSize				dw 0
-BytesRead				dw 0
+BytesRead				dd 0
 NextCluster				dw 0
 MemoryPointer			dd 0
 

@@ -109,7 +109,7 @@ int init_interrupts()
 		if (!status)
 			return status;
 	}
-	
+
 	set_idt_entry(INT_SYSCALL, syscallHandler, 0);
 
 	idtInitialized = true;
@@ -142,7 +142,7 @@ int set_idt_entry(unsigned int vectorNum, void (*intHandler)(), unsigned int dpl
 	case 3:
 	default: settings = DPL_3;
 	}
-	
+
 	//asm volatile("movw %%cs, %0" :"=g"(selector));
 	IDT[vectorNum].offsetLow = offset & 0xFFFF;
 	IDT[vectorNum].selector = KERNEL_CODE_SELECTOR;
@@ -190,16 +190,29 @@ void reboot(void)
 // Our C interrupt/exception handler
 void exception_handler(int_stack_regs_struct *intRegs)
 {
+	unsigned int *i;
+
 	// Dump CPU state to console
-	kprintf("\nunhandled exception %d at %p:%p\n",
+	kprintf("\nunhandled exception %d at %04X:%08X\n",
 		intRegs->interruptNum, intRegs->cs, intRegs->eip);
 	kprintf("EAX=%08X EBX=%08X ECX=%08X EDX=%08X\n",
 		intRegs->eax, intRegs->ebx, intRegs->ecx, intRegs->edx);
 	kprintf("ESI=%08X EDI=%08X EBP=%08X ESP=%08X\n",
 		intRegs->esi, intRegs->edi, intRegs->ebp, intRegs->esp);
-	kprintf(" DS=%04X  ES=%04X  FS=%04X  GS=%04X\n",
+	kprintf(" DS=%04X  ES=%04X  FS=%04X  GS=%04X  ",
 		intRegs->ds, intRegs->es, intRegs->fs, intRegs->gs);
-	kprintf(" EFLAGS=%08X UNKNOWN=%08X\n", intRegs->eflags, 0); //intRegs->temp);
+	kprintf("EFLAGS=%08X\n", intRegs->eflags); //intRegs->temp);
+
+	i=(unsigned int *)intRegs->esp;
+
+	kprintf("STACK:\n");
+	while ((unsigned int)i < intRegs->esp+0x30) {
+		kprintf("0x%08X = %08X", (unsigned int)i, *i);
+		if ((unsigned int)i == intRegs->esp+0x10)
+			kprintf(" <=== [ TOS ]");
+		kprintf("\n");
+		i++;
+	}
 
 	// Handle it
 	switch(intRegs->interruptNum)
@@ -271,6 +284,6 @@ void exception_handler(int_stack_regs_struct *intRegs)
 		panic(true, "kernel panic: unknown interrupt caught");
 		break;
 	}
-	
-	//while(1);
+
+	while(1);
 }

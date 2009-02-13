@@ -59,15 +59,19 @@
 	; IRQ handlers
 	GLOBAL x86InterruptHandler20
 	GLOBAL x86InterruptHandler21
-	
+
 	; Other handlers
 	GLOBAL syscallHandler
+
+	GLOBAL asm_one
+	GLOBAL asm_two
 
 	; External C interrupt handlers
 	EXTERN exception_handler
 	EXTERN page_fault_handler
 	EXTERN task_switch
 	EXTERN kbd_irq_handler
+	EXTERN task_switch_test
 
 
 ; Must have same value in interrupts.h
@@ -180,22 +184,14 @@ x86ExceptionHandlerUnimp:
 	push	dword INT_UNHANDLED
 	jmp	mainIsrStub
 
-mainIsrStub:
-	MACRO_REGS_SAVE
-	mov	eax, esp
-	push	eax
-	call	exception_handler
-	pop	eax
-	MACRO_REGS_RESTORE
-	add	esp, 4				; Pop exception number
-	iret
-
-
 ; ********** PAGE FAULT HANDLER **********
 x86PageFault:
 	cli
+	xchg	bx,bx
+	push	eax
+	push	ebx
 	MACRO_REGS_SAVE
-	
+
 	; Push pointer to register stack struct
 	;mov	eax, esp
 	;push	eax
@@ -207,37 +203,50 @@ x86PageFault:
 	; Push pointer to old EIP that caused page fault
 	mov	eax, [esp+52]
 	push	eax
-	
+
 	; Push pointer to page fault error code
 	mov eax, [esp+52]
 	push	eax
-	
+
 	; Push pointer to offending address
 	mov	eax, cr2
 	push	eax
-	
+
 	call	page_fault_handler
 	pop	eax
 	pop eax
 	pop	eax
-	
+
+	; Why is this needed?? *BUG*
 	mov	ebx, [esp+48]
 	mov	eax, [esp+52]
 	mov	[esp+48], eax
 	mov	eax, [esp+56]
 	mov	[esp+52], eax
 	mov	[esp+56], ebx
-	
+
 	MACRO_REGS_RESTORE
 	sti
 	iret
 
+mainIsrStub:
+	;xchg bx, bx
+	MACRO_REGS_SAVE
+	mov	eax, esp
+	push	eax
+	call	exception_handler
+	;xchg bx, bx
+	pop	eax
+	MACRO_REGS_RESTORE
+	add	esp, 4				; Pop exception number
+	iret
+
+
 ; ********** IRQ HANDLERS **********
 ; IRQ 0 - Timer
 x86InterruptHandler20:
-	;push	dword 0x20
-	;jmp	mainIsrStub
 	cli
+	;xchg	bx, bx
 	MACRO_REGS_SAVE
 
 	; Copy user regs to process regs struct
@@ -247,26 +256,30 @@ x86InterruptHandler20:
 	;mov	ecx, 17
 	;rep	movsd
 	;add	esp, 68
-	
+
 	; Call task switcher
 	mov		eax, esp
 	push	eax
 	call	task_switch
-	;add		esp, 4
 	mov		esp, eax
-	
+	;xchg	bx, bx
+
+	;cmp		dword [eax+0xc], 0
+	;jne		.cont
+
 	; Update system TSS
 	;mov	ebx, [eax+8]
-	;mov	[tss_esp0], ebx
-
+	;mov	 [tss_esp0], ebx
+;.cont:
 	MACRO_REGS_RESTORE
 	sti
 	iret
-	
+
 ; IRQ 1 - Keyboard
 x86InterruptHandler21:
 	cli
 	MACRO_REGS_SAVE
+	;xchg	bx, bx
 	call	kbd_irq_handler
 	MACRO_REGS_RESTORE
 	sti
@@ -276,3 +289,11 @@ x86InterruptHandler21:
 syscallHandler:
 	push	dword 0x80
 	jmp	mainIsrStub
+
+asm_one:
+	mov	eax, 1
+	jmp	asm_one
+
+asm_two:
+	mov	eax, 2
+	jmp	asm_two

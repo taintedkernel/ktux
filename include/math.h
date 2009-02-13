@@ -18,23 +18,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// ktux.h - general defines and statics
+// math.h - general math subroutines
 
-#ifndef __KTUX_KERNELDEFINES_H
-#define __KTUX_KERNELDEFINES_H
+#ifndef __KTUX_MATH_H
+#define __KTUX_MATH_H
 
-// Kernel basic variable typedefs
-#define byte			unsigned char
-#define word			unsigned short
-#define dword			unsigned int
-#define bool			unsigned int
+#define max(num, val)		((num > val) ? val : num)
 
-#define false			0	// (0)
-#define true			1	// (1)
-
-#define OK				1
-#define ERROR			0
-
-#define NULL			(void *)0
-
-#endif
+#endif /*MATH_H_*/

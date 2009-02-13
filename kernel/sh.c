@@ -18,64 +18,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// timer.c - 8253 driver
+// sh.c - command prompt
 
 #include <ktux.h>
-#include <timer.h>
+#include <sh.h>			// this source
+#include <pic.h>
+#include <stdio.h>
+#include <string.h>
 #include <interrupts.h>
 
-// dependencies
-#include <io.h>
-#include <stdio.h>
-#include <video.h>
+int shellInitialized = false;
 
-
-static long int tick = 0;
-//static unsigned long *oldeip = (void *)0;
-
-/*static ktuxTimerDriver timerDriver;
-static ktuxStdDriverBase timerDriverBase = {
-	false,						// Driver initialized (always default to false)
-	true,						// Driver implements IRQ?
-	init_timerialize,			// InitDriver() function pointer
-	TimerIRQHandler				// HandleIRQ() function pointer
-};
-
-int TimerDriverInitialize(void)
+void init_shell()
 {
-	// Our basic driver init function
-	timerDriver.driverBase = &timerDriverBase;
-
-	// Register driver with kernel
-	ktuxRegisterDriver(TIMER_DRIVER, &timerDriver);
-
-	// Driver init flag = true
-	timerDriver.driverBase->driverInitialized = true;
-
-	return 0;
-}*/
-
-int init_timer(void)
-{
-	return 0;
+	shellInitialized = true;
 }
 
-unsigned int TimerIRQHandler(unsigned int oldESP)
+void processCommand(char *command)
 {
-	tick++;
-	putch('.');
-	return oldESP;
+	if (!shellInitialized)
+		return;
+
+	if (strcmp(command, "timer") == 1)
+	{
+		toggle_irq(IRQ_TIMER);
+	}
 }
 
-void reprogram_timer(unsigned int freq)
+void shell_prompt()
 {
-/* I can remember the NTSC TV color burst frequency, but not the PC
-peripheral clock. Fortunately, they are related: */
-	unsigned short foo = (3579545L / 3) / freq;
-/**/
+	if (!shellInitialized)
+		return;
 
-/* reprogram the 8253 timer chip to run at 'HZ', instead of 18 Hz */
-	outportb(0x43, 0x36);	/* channel 0, LSB/MSB, mode 3, binary */
-	outportb(0x40, foo & 0xFF);	/* LSB */
-	outportb(0x40, foo >> 8);	/* MSB */
+	kprintf("shell:~# ");
 }
