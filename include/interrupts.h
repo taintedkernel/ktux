@@ -104,12 +104,12 @@ typedef volatile struct
 	unsigned int interruptNum;
 
 	// registers pushed from x86 hardware handling of interrupt
-	//unsigned int eip;
-	//unsigned int cs;
-	//unsigned int eflags;
-	unsigned int eflags;
 	unsigned int eip;
 	unsigned int cs;
+	unsigned int eflags;
+	//unsigned int eflags;
+	//unsigned int eip;
+	//unsigned int cs;
 } __attribute__ ((packed)) int_stack_regs_struct;
 
 

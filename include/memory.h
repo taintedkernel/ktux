@@ -31,11 +31,11 @@
 #define MEMORY_PAGING							1
 #define MEMORY_HEAP								2
 
-
-// Kernel physical memory address - *MUST* be 4k aligned! //
+// Kernel PHYSICAL memory address - *MUST* be 4k aligned! //
 // List these in ascending order //
 #define KERNEL_PHYS_ADDR						0x00100000
 #define KERNEL_STACK_SIZE						0x00001000
+// stack & page directory
 #define P_KERNEL_STACK_ADDR						0x00003000
 #define P_KERNEL_PAGE_DIRECTORY					0x00004000
 // page tables
@@ -44,21 +44,21 @@
 #define P_PAGE_TABLE_HEAP_1						0x00007000
 #define P_MAPPED_PTABLE_1						0x00008000
 // start of free ram
-#define P_START_1MB_FREE_RAM					0x00009000
+#define P_START_FREE_RAM						0x00009000
 
 
-// Kernel virtual memory addresses - *MUST* be 4k aligned! //
+// Kernel VIRTUAL memory addresses - *MUST* be 4k aligned! //
 #define KERNEL_VIRT_ADDR						0xC0000000
-
 #define V_KERNEL_HEAP_ADDR						0xD0000000
 #define V_KERNEL_DRIVER_HEAP					0xE0000000
 #define V_KERNEL_MISC							0xF0000000
 #define V_KERNEL_PAGE_TABLE_1					0xF0000000
 #define V_KERNEL_PAGE_TABLE_TABLE				0xF0400000			// V_KERNEL_PAGE_TABLE_1 + 4mb
-//#define KERNEL_HEAP_ADDR						0xD0000000
-//#define KERNEL_DRIVER_HEAP					0xE0000000
-//#define KERNEL_MISC							0xF0000000
+#define KERNEL_HEAP_ADDR						0xD0000000
+#define KERNEL_DRIVER_HEAP						0xE0000000
+#define KERNEL_MISC								0xF0000000
 
+// user-land
 #define USER_STACK								0xFFFFD000
 #define USER_PAGE_DIRECTORY						0xFFFFE000
 #define USER_PAGE_TABLE_1						0xFFCFE000
@@ -67,32 +67,7 @@
 //#define USER_PAGE_DIRECTORY					0xFFFFE000
 
 
-// 80x86 arch memory management //
-
-// page table conversion macros
-#define virt2Phys(addr)							( addr - KERNEL_VIRT_ADDR + KERNEL_PHYS_ADDR )
-#define phys2Virt(addr)							( addr + KERNEL_VIRT_ADDR - KERNEL_PHYS_ADDR )
-#define virt2Dir(addr)							( addr >> DIR_ADDR_SHIFT )		// Divide by 4mb
-#define virt2Page(addr)							(( addr >> TABLE_ADDR_SHIFT ) & TABLE_ADDR_MASK )		// Offset within a page
-#define virt2Map(addr)							(( addr >> DIR_ADDR_SHIFT << TABLE_ADDR_SHIFT ) + V_KERNEL_PAGE_TABLE_1 )
-#define bytes2KB(addr)							( addr >> 10 )
-
-//#define virt2PageTableDir(addr)					((( addr >> DIR_ADDR_SHIFT << TABLE_ADDR_SHIFT ) + V_KERNEL_PAGE_TABLE_1 ) >> DIR_ADDR_SHIFT )
-
-// page table entry macros
-#define makePDEphys(physAddr, flags)			((physAddr & PDE_ADDR_MASK) | (flags & (~PDE_ADDR_MASK)))
-#define makePTEphys(physAddr, flags)			((physAddr & PTE_ADDR_MASK) | (flags & (~PTE_ADDR_MASK)))
-
-#define setPDEaddr(PD, virt, phys, flags)		PD[virt2Dir(virt)] = makePDEphys(phys, flags)
-#define setPDEindex(PD, index, phys, flags)		PD[index] = makePDEphys(phys, flags)
-#define setPTEaddr(PT, virt, phys, flags)		setPDEindex(PT, virt2Page(virt), phys, flags)
-#define setPTEindex(PT, index, phys, flags)		setPDEindex(PT, index, phys, flags)
-
-// old //
-//#define virt2Page(addr)						(( addr & (( 1 << DIR_ADDR_SHIFT ) - 1 )) >> PAGE_SIZE_SHIFT ) 
-//#define makePTEvirt(linearAddr, flags)		((phys2Virt(linearAddr) & PTE_ADDR_MASK) | (flags & (~PTE_ADDR_MASK)))
-//#define makePDEvirt(linearAddr, flags)		((phys2Virt(linearAddr) & PDE_ADDR_MASK) | (flags & (~PDE_ADDR_MASK)))
-// old //
+/*** 80x86 arch memory management ***/
 
 // paging constants
 #define PAGING_ENTRY_SHIFT						10								// 1024 (2^10) entries per page table/directory
@@ -104,11 +79,13 @@
 #define PDE_ADDR_MASK							0xFFFFF000
 #define PDE_FLAG_PRESENT						0x001
 #define PDE_FLAG_RW								0x002
+#define PDE_FLAG_KERNEL							0x000		// redundant but good form
 #define PDE_FLAG_USER							0x004
 
 #define PTE_ADDR_MASK							PDE_ADDR_MASK
 #define PTE_FLAG_PRESENT						PDE_FLAG_PRESENT
 #define PTE_FLAG_RW								PDE_FLAG_RW
+#define PTE_FLAG_KERNEL							PDE_FLAG_KERNEL
 #define PTE_FLAG_USER							PDE_FLAG_USER
 
 #define DIR_ADDR_SHIFT							22
@@ -121,6 +98,31 @@
 #define isReadWrite(flag)						(flag & PDE_FLAG_RW)
 #define isUser(flag)							(flag & PDE_FLAG_USER)
 #define regionOverlap(addr, size, regBeg, regEnd)		(regBeg < addr+size-1 && regEnd-1 > addr)
+
+// page table conversion macros
+#define virt2Phys(addr)							( addr - KERNEL_VIRT_ADDR + KERNEL_PHYS_ADDR )
+#define phys2Virt(addr)							( addr + KERNEL_VIRT_ADDR - KERNEL_PHYS_ADDR )
+#define virt2Dir(addr)							( addr >> DIR_ADDR_SHIFT )		// Divide by 4mb
+#define virt2Page(addr)							(( addr >> TABLE_ADDR_SHIFT ) & TABLE_ADDR_MASK )		// Offset within a page
+#define virt2Map(addr)							(( addr >> DIR_ADDR_SHIFT << TABLE_ADDR_SHIFT ) + V_KERNEL_PAGE_TABLE_1 )
+#define bytes2KB(addr)							( addr >> 10 )
+
+// old
+//#define virt2Page(addr)						(( addr & (( 1 << DIR_ADDR_SHIFT ) - 1 )) >> PAGE_SIZE_SHIFT )
+//#define virt2PageTableDir(addr)					((( addr >> DIR_ADDR_SHIFT << TABLE_ADDR_SHIFT ) + V_KERNEL_PAGE_TABLE_1 ) >> DIR_ADDR_SHIFT )
+
+
+// page table entry macros
+#define makePDEphys(physAddr, flags)			((physAddr & PDE_ADDR_MASK) | (flags & (~PDE_ADDR_MASK)))
+#define makePTEphys(physAddr, flags)			((physAddr & PTE_ADDR_MASK) | (flags & (~PTE_ADDR_MASK)))
+#define makePTEvirt(linearAddr, flags)			((phys2Virt(linearAddr) & PTE_ADDR_MASK) | (flags & (~PTE_ADDR_MASK)))
+#define makePDEvirt(linearAddr, flags)			((phys2Virt(linearAddr) & PDE_ADDR_MASK) | (flags & (~PDE_ADDR_MASK)))
+
+#define setPDEaddr(PD, virt, phys, flags)		PD[virt2Dir(virt)] = makePDEphys(phys, flags)
+#define setPDEindex(PD, index, phys, flags)		PD[index] = makePDEphys(phys, flags)
+#define setPTEaddr(PT, virt, phys, flags)		setPDEindex(PT, virt2Page(virt), phys, flags)
+#define setPTEindex(PT, index, phys, flags)		setPDEindex(PT, index, phys, flags)
+
 
 // 80x86 reserved memory regions (physical)
 #define BDA_RSVD_MEM_START						0x00000000
@@ -139,6 +141,7 @@
 #define MEM_E820_ADDRESS_MEMORY					0x01
 #define MEM_E820_ADDRESS_RSVD					0x02
 #define MEM_E820_END_MAP						0xDEADBEEF
+
 // end x86 stuff
 
 
@@ -157,6 +160,7 @@ void init_heap(void);
 void page_fault_handler(unsigned int, unsigned int, unsigned int);
 
 // virtual memory management
+void kfree(void *);
 void *kmalloc(unsigned int nbytes);
 void *sbrk(unsigned int nbytes);
 //void set_mapped_table_entry(unsigned int virt);

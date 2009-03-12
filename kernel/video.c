@@ -172,7 +172,7 @@ ESC */
 	{
 		if(isdigit(c))
 		{
-			//asm volatile("xchg %bx, %bx");
+			//DEBUG_BP
 			con->esc1 = con->esc1 * 10 + c - '0';
 			return;
 		}

@@ -27,6 +27,7 @@
 // dependencies
 #include <io.h>							// inportb()
 #include <stdio.h>						// putch()
+#include <pic.h>
 #include <interrupts.h>                 // reboot()
 #include <sh.h>							// processCommand()
 #include <string.h>						// memsetd()
@@ -209,7 +210,11 @@ LEDS:		write_kbd(0x60, 0xED);	// "set LEDs" command
 			if (cmd_buf_add(i) == OK && echo)
 			{
 				putch(i);
-				//if (i == 's') start_scheduler();
+				if (i == 's'){
+					cli();
+					ps();
+					sti();
+				}
 			}
 		}
 	}

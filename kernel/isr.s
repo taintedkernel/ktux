@@ -69,9 +69,9 @@
 	; External C interrupt handlers
 	EXTERN exception_handler
 	EXTERN page_fault_handler
-	EXTERN task_switch
+	EXTERN __task_switch				; Current timer handler
 	EXTERN kbd_irq_handler
-	EXTERN task_switch_test
+	EXTERN syscall_handler
 
 
 ; Must have same value in interrupts.h
@@ -165,7 +165,7 @@ x86ExceptionHandlerD:
 	push	dword 0xD
 	jmp	mainIsrStub
 
-; Exception/Interrupt 14 is Page Fault
+; Exception/Interrupt 14 is Page Fault (below)
 ; Exception/Interrupt 15 is Intel-reserved
 
 x86ExceptionHandler10:
@@ -182,15 +182,28 @@ x86ExceptionHandler12:
 
 x86ExceptionHandlerUnimp:
 	push	dword INT_UNHANDLED
-	jmp	mainIsrStub
+
+mainIsrStub:
+	;xchg bx, bx
+	MACRO_REGS_SAVE
+	mov	eax, esp
+	push	eax
+	call	exception_handler
+	;xchg bx, bx
+	pop	eax
+	MACRO_REGS_RESTORE
+	add	esp, 4				; Pop exception number
+	iret
+
 
 ; ********** PAGE FAULT HANDLER **********
 x86PageFault:
 	cli
 	xchg	bx,bx
-	push	eax
-	push	ebx
+	;push	eax
+	;push	ebx
 	MACRO_REGS_SAVE
+	xchg	bx,bx
 
 	; Push pointer to register stack struct
 	;mov	eax, esp
@@ -201,12 +214,12 @@ x86PageFault:
 	;pop	eax
 
 	; Push pointer to old EIP that caused page fault
-	mov	eax, [esp+52]
-	push	eax
+	;mov	eax, [esp+52]
+	;push	eax
 
 	; Push pointer to page fault error code
-	mov eax, [esp+52]
-	push	eax
+	;mov eax, [esp+52]
+	;push	eax
 
 	; Push pointer to offending address
 	mov	eax, cr2
@@ -229,18 +242,6 @@ x86PageFault:
 	sti
 	iret
 
-mainIsrStub:
-	;xchg bx, bx
-	MACRO_REGS_SAVE
-	mov	eax, esp
-	push	eax
-	call	exception_handler
-	;xchg bx, bx
-	pop	eax
-	MACRO_REGS_RESTORE
-	add	esp, 4				; Pop exception number
-	iret
-
 
 ; ********** IRQ HANDLERS **********
 ; IRQ 0 - Timer
@@ -260,7 +261,7 @@ x86InterruptHandler20:
 	; Call task switcher
 	mov		eax, esp
 	push	eax
-	call	task_switch
+	call	__task_switch
 	mov		esp, eax
 	;xchg	bx, bx
 
@@ -287,8 +288,14 @@ x86InterruptHandler21:
 
 ; Handles our OS/system calls
 syscallHandler:
-	push	dword 0x80
-	jmp	mainIsrStub
+	MACRO_REGS_SAVE
+	mov	eax, esp
+	push	eax
+	call	syscall_handler
+	;xchg bx, bx
+	pop	eax
+	MACRO_REGS_RESTORE
+	iret
 
 asm_one:
 	mov	eax, 1

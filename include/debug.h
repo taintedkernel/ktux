@@ -18,24 +18,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// syscall.c
+// debug.h
 
-#include <ktux.h>
-#include <syscall.h>		// this source
-#include <stdio.h>
+#ifndef __KTUX_DEBUG_H_
+#define __KTUX_DEBUG_H_
 
-void syscall_handler(syscall_stack_regs_t *regs)
-{
-	switch((unsigned int)regs->eax)
-	{
-	case 0x1:
-		kprintf("hello from syscall_handler();\n");
-		break;
-	case 0x2:
+#define DEBUG_BP 		asm volatile("xchg %bx, %bx");
 
-		break;
-	default:
-		break;
-	}
-}
-
+#endif /* DEBUG_H_ */

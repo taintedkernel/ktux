@@ -23,29 +23,37 @@
 #ifndef __KTUX_PROCESS_H
 #define __KTUX_PROCESS_H
 
-#include <memory.h>
+#include <list.h>
 #include <video.h>
+//#include <memory.h>
 
-#define MAX_THREADS			10
-#define INT_PER_SLICE		32
+// scheduler constants
+#define MAX_THREADS			1024
+#define INT_PER_SLICE		64
 
+// thread constants
 #define PATH_SIZE			256
 #define NAME_SIZE			64
 #define STACK_SIZE			0x200
 
-// Process privledge
+// process privledge
 #define THREAD_KERNEL		0
 #define THREAD_USER			1
 
-// Process status
+// process status
 #define PROCESS_INIT		1
 #define PROCESS_READY		2
-#define PROCESS_RUN			3
+#define PROCESS_RUNNING		3
 #define PROCESS_WAIT		4
 #define PROCESS_SLEEP		5
 #define PROCESS_STOP		6
 #define PROCESS_ZOMBIE		7
+#define PROCESS_FREE		8
 
+// calculate length of timeslice (# timer interrupts before context switch)
+#define QuantumAmount(thread) (INT_PER_SLICE - thread->priority)
+
+// structs
 typedef volatile struct {
 	unsigned int link;
 	volatile unsigned int esp0;
@@ -76,7 +84,7 @@ typedef volatile struct {
   	unsigned short io_map_addr;
 } __attribute__ ((packed)) tss_struct;
 
-typedef volatile struct
+/*typedef volatile struct
 {
 	unsigned int ds;
 	unsigned int es;
@@ -95,21 +103,27 @@ typedef volatile struct
 	unsigned int eflags;
 	unsigned int esp;
 	unsigned int ss;
-} __attribute__ ((packed)) pmode_task_struct;
+} __attribute__ ((packed)) pmode_task_struct;*/
 
-typedef volatile struct
+struct kernel_thread_struct
 {
-	char name[20];
+	char name[NAME_SIZE];
 	unsigned int id;
 	int priority;
 	unsigned int status;
 	unsigned int priv;
 	unsigned int esp0;
 	unsigned int esp3;
+	unsigned int esp0base;
+	unsigned int esp3base;
 	unsigned int cr3;
 	unsigned int time;
+	unsigned int quantum;
+	list_head list;
 	console *tty;
-} __attribute__ ((packed)) process_struct;
+};
+
+typedef volatile struct kernel_thread_struct kernel_thread_t;
 
 typedef volatile struct
 {
@@ -117,18 +131,25 @@ typedef volatile struct
 	unsigned int esp3;
 	unsigned int slice;
 	//unsigned int pid;
-} __attribute__ ((packed)) thread_struct;
+} __attribute__ ((packed)) user_thread_struct;
 
+
+// function declarations
 void init_multitasking();
-void create_thread(unsigned int, void (*)());
-unsigned int task_switch(unsigned int);
-void do_idle();
 void start_scheduler();
 
-unsigned int get_next_pid(void);
-unsigned int get_page_directory(unsigned int pid);
-unsigned int create_kernel_thread(char *, unsigned int, unsigned int, unsigned int, char);
-unsigned int create_user_thread(unsigned int, unsigned int);
+void yield();
+unsigned int create_kernel_thread(char *name, void (*)());
+
+void nice(int);
+void p_nice(kernel_thread_t *, int);
+unsigned int alloc_pid(void);
+unsigned int get_num_threads();
+unsigned int p_get_page_directory(kernel_thread_t *, unsigned int);
+
+void ps();
+void kill();
+void do_idle();
 
 #endif
 

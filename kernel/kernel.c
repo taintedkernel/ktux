@@ -32,13 +32,10 @@
 #include <video.h>
 #include <process.h>
 #include <sh.h>
-
-#define BUFFER_SIZE 0x1000
+#include <list.h>
+#include <debug.h>
 
 systemInfo *thisSystem;
-
-unsigned int *pointer;
-//extern unsigned int t1;
 
 // We come in with interrupts disabled
 void _kernel_main(void *bootParam)
@@ -48,7 +45,7 @@ void _kernel_main(void *bootParam)
 
 	// After paging enabled, update pointers
 	thisSystem = virt2Phys(bootParam);
-	bootParam = NULL;				// NULL our old one
+	bootParam = NULL;			// NULL our old one
 
 	// Initialize console for stdout
 	init_console();
@@ -71,47 +68,20 @@ void _kernel_main(void *bootParam)
 	// Heap
 	kprintf("kernel heap ...\n");
 	init_heap();
-	//while (1);
 	kprintf("  [ OK ]\n");
 
 	// Hardware
-	kprintf("hardware ...\n");
+	kprintf("hardware .");
 	init_pic();
+	kprintf(".");
 	init_timer();
+	kprintf(".");
 	init_keyboard();
-	kprintf("  [ OK ]\n");
+	kprintf("\n  [ OK ]\n");
 
 	kprintf("scheduler ...\n");
 	init_multitasking();
 	kprintf("  [ OK ]\n");
-
-	//init_multitasker();
-	//spawn_threads();
-	//init_tasks();
-
-	/* ok, so we can't use malloc here.
-	 * calling it returns 0xd0000000 for some reason
-	 * even though it's been called before, the heap
-	 * certainly is not empty. */
-	/*pointer = kmalloc(0x1000);
-	pointer = kmalloc(0x2880);
-	pointer = kmalloc(0x488);
-	kprintf("pointer=0x%p\n", pointer);*/
-
-	/*pointer = kmalloc(BUFFER_SIZE);
-	kprintf("pointer=0x%p\n", pointer);
-	for (i=0;i<BUFFER_SIZE>>2;i++) {
-		//kprintf("0x%p %d\t", &pointer[i], i);
-		pointer[i]=0;
-	}
-	kprintf("wrote to buffer successfully\n");*/
-	//while(1);
-
-	/*kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
-	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
-	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
-	kprintf("malloc(100000) = 0x%p\n", kmalloc(0x10000));
-	kprintf("malloc(80000) = 0x%p\n", kmalloc(0x8000));*/
 
 	// Remap our PICs, set IRQ0 to 18Hz, enable only IRQs 0&1, and turn on interrupts
 	kprintf("Reprogramming timer and enabling IRQs...\n");
@@ -121,23 +91,15 @@ void _kernel_main(void *bootParam)
 
 	reprogram_timer(1000);
 	enable_irq(1);
-	enable_irq(0);
 	start_scheduler();
 	sti();
 
-	//kill_thread();
-	//kprintf("\nPrepare idle...");
 	while(1) {
-		//t1++;
-		//do_idle();
-		//yield();
-		//asm volatile("xchg bx, bx");
+		kill();
+		//DEBUG_BP
 		//asm volatile("int $0x20");
 	}
 
-	//kprintf("\nmalloc(10000) = 0x%p\n", kmalloc(0x10000));
-	//__asm__ __volatile("int $0x80");
-
 	kprintf("kernel panic: exceution continuing beyond _kernel_main address space!");
-	while(1);
+	while(1);		// one more final catch
 }

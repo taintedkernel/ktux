@@ -42,9 +42,9 @@ KERNELOBJS	= kernelInit.o kernel.o hardware.o interrupts.o io.o isr.o keyboard.o
 			paging.o pic.o process.o sh.o stdio.o string.o syscall.o tasks.o timer.o tss.o video.o
 
 HEADERS		= $(INCDIR)/_va_list.h $(INCDIR)/conio.h $(INCDIR)/error.h $(INCDIR)/hardware.h $(INCDIR)/interrupts.h \
-			$(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/keyboard.h $(INCDIR)/memory.h $(INCDIR)/paging.h $(INCDIR)/pic.h \
-			$(INCDIR)/stdarg.h $(INCDIR)/stdio.h $(INCDIR)/string.h $(INCDIR)/timer.h $(INCDIR)/vga.h $(INCDIR)/video.h \
-			$(INCDIR)/process.h $(INCDIR)/sh.h $(INCDIR)/syscall.h $(INCDIR)/tasks.h
+			$(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/keyboard.h ${INCDIR}/list.h $(INCDIR)/memory.h $(INCDIR)/paging.h \
+			$(INCDIR)/pic.h $(INCDIR)/stdarg.h $(INCDIR)/stdio.h $(INCDIR)/string.h $(INCDIR)/timer.h $(INCDIR)/vga.h \
+			$(INCDIR)/video.h $(INCDIR)/process.h $(INCDIR)/sh.h $(INCDIR)/syscall.h $(INCDIR)/tasks.h
 
 
 ##############

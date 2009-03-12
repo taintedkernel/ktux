@@ -23,14 +23,9 @@
 #ifndef __KTUX_TASKS_H
 #define __KTUX_TASKS_H
 
-static int write(unsigned char *);
-//static int write(const unsigned char *, unsigned);
-void thread_one(void);
-void thread_two(void);
-void thread_monitor(void);
-void one_main(void);
-void two_main(void);
-void one_loop(void);
-void two_loop(void);
+void thread_foo();
+void thread_bar();
+void thread_gamma();
+void thread_monitor();
 
 #endif

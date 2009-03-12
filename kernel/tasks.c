@@ -21,24 +21,28 @@
 // tasks.c - external tasks/threads
 
 #include <tasks.h>
+#include <process.h>
 #include <video.h>
 #include <stdio.h>
+#include <debug.h>
 
-//extern console *_curr_vc;
-extern console _vc[];
+//extern console _vc[];
+console tty1, tty2;
 
-console tty1;
-console tty2;
+/* we can get away without using volatile
+ * because we are using inline asm and
+ * do the inc with indirect addressing (ie:
+ * not updating a local/register copy of the
+ * variable)  using var++ in C would not work
+ * without the volatile keyword
+ */
+static unsigned int foo;
+static unsigned int bar;
+static unsigned int gamma;
 
-//unsigned short buf_size=32;
-//char *uf_ptr=(void *)0;
-
-unsigned int t1;
-unsigned int t2;
-
-int volatile write(unsigned char *str)
+/*int volatile write(unsigned char *str)
 {
-	//asm volatile("xchg %bx, %bx");
+	//DEBUG_BP
 	unsigned i=0;
 
 	for(; *str!='\0'; str++)
@@ -48,35 +52,50 @@ int volatile write(unsigned char *str)
 	}
 
 	return i;
-}
+}*/
 
-volatile void thread_one()
+volatile void thread_foo()
 {
-	//asm volatile("xchg %bx, %bx");
-	for (t1=0;;)
+	//DEBUG_BP
+	for (foo=0;;)
 	{
 		asm volatile ("movl %1, %%eax;"
-		     "incl (%%eax);"
-			:"=r"(t1)
-			:"r"(&t1)
-			:"%eax");
+			"incl (%%eax);"
+			: "=r"(foo)
+			: "r"(&foo)
+			: "%eax" );
 	}
 }
 
-volatile void thread_two()
+volatile void thread_bar()
 {
-	//asm volatile("xchg %bx, %bx");
-	for (t2=0;;)
+	//nice(16);
+
+	//DEBUG_BP
+	for (bar=0;;)
 	{
 		asm volatile ("movl %1, %%eax;"
 				//"nop;"
-		     "incl (%%eax);"
-			:"=r"(t2)
-			:"r"(&t2)
-			:"%eax");
+			"incl (%%eax);"
+			: "=r"(bar)
+			: "r"(&bar)
+			: "%eax" );
+	}
+}
 
-		/*asm volatile("movl %1, %%eax;"
-				"incl (%%eax);" :: "r"(t2) : "%eax");*/
+volatile void thread_gamma()
+{
+	nice(-63);			// we are important like the preccioussss
+
+	//DEBUG_BP
+	for (gamma=0;;)
+	{
+		asm volatile ("movl %1, %%eax;"
+				//"nop;"
+			"incl (%%eax);"
+			: "=r"(gamma)
+			: "r"(&gamma)
+			: "%eax" );
 	}
 }
 
@@ -85,79 +104,12 @@ void thread_monitor()
 	unsigned short y;
 
 	kprintf("counting threads:\n");
-	y=get_csr_y();
+	y = get_csr_y();
 
 	while(1) {
 		move_cursor(0,y);
-		kprintf("%u\t%u", t1, t2);
-		asm volatile("int $0x20");
-		//asm volatile("xchg %bx, %bx");
+		//kprintf("%u\t%u", foo, bar);
+		kprintf("%u\t%u\t%u", foo, bar, gamma);
+		yield();
 	}
-}
-
-void one_loop()
-{
-	//static unsigned int i=0;
-	char progress[] = "\\1/1";
-	//static unsigned short cursor=0;
-	unsigned int p=0;
-
-	while(1) {
-		//asm volatile("xchg %bx, %bx");
-		//move_cursor(tty.csr_x,tty.csr_y);
-		putch_help(&tty1,'\b');
-		//write(progress[p++%4], 1);
-		putch_help(&tty1,progress[p++%4]);
-	}
-}
-
-void two_loop()
-{
-	//static unsigned int i=0;
-	char progress[] = "\\2/2";
-	//static unsigned short cursor=0;
-	unsigned int p=0;
-
-	while(1) {
-		//asm volatile("xchg %bx, %bx");
-		//move_cursor(tty.csr_x,tty.csr_y);
-		//write(progress[p++%4], 1);
-		putch_help(&tty2,'\b');
-		putch_help(&tty2,progress[p++%4]);
-	}
-}
-
-void one_main(void)
-{
-	//asm volatile("xchg %bx, %bx");
-	//kprintf("loop one : .");
-	//move_cursor(0,0);
-	/*tty1.csr_x=get_csr_x();
-	tty1.csr_y=0;
-	tty1.fb_adr=_vc[0].fb_adr;
-	tty1.attrib=_vc[0].attrib;
-
-	putch_help(&tty1, '1');
-	putch_help(&tty1, ':');
-	putch_help(&tty1, ' ');*/
-
-	one_loop();
-}
-
-void two_main(void)
-{
-	//asm volatile("xchg %bx, %bx");
-	//kprintf("loop two : .");
-	//move_cursor(0,1);
-	/*tty2.csr_x=get_csr_x();
-	tty2.csr_y=1;
-	tty2.fb_adr=_vc[0].fb_adr;
-	tty2.attrib=_vc[0].attrib;
-
-	putch_help(&tty2, '\n');
-	putch_help(&tty2, '2');
-	putch_help(&tty2, ':');
-	putch_help(&tty2, ' ');*/
-
-	two_loop();
 }

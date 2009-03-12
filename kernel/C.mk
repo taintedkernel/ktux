@@ -72,6 +72,12 @@ keyboard.o: \
 	${INCDIR}/video.h
 	${CC} -c -o $@ $<
 
+list.o: \
+	list.c \
+	${INCDIR}/list.h \
+	${INCDIR}/memory.h
+	${CC} -c -o $@ $<
+
 memory.o: \
 	memory.c \
 	${INCDIR}/_va_list.h \

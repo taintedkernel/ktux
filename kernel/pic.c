@@ -105,14 +105,16 @@ int toggle_irq(unsigned int irqNum)
 {
 	if (!idtInitialized) {
 		panic(false, "kernel error: set_irqs() called without initialization");
+		return ERROR;
 	}
 	if (irqNum > MAX_IRQ_IMP)
 		return ERROR;
 
-	if (irqStatus[irqNum] == 0)
+	(irqStatus[irqNum] == 0) ? enable_irq(irqNum) : disable_irq(irqNum);
+	/*if (irqStatus[irqNum] == 0)
 		enable_irq(irqNum);
 	else if (irqStatus[irqNum] == 1)
-		disable_irq(irqNum);
+		disable_irq(irqNum);*/
 
 	return OK;
 }

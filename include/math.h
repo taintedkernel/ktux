@@ -23,6 +23,7 @@
 #ifndef __KTUX_MATH_H
 #define __KTUX_MATH_H
 
-#define max(num, val)		((num > val) ? val : num)
+#define min(num, val)		((num < val) ? num : val)
+#define max(num, val)		((num > val) ? num : val)
 
 #endif /*MATH_H_*/
