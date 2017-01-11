@@ -20,17 +20,19 @@
 
 # Makefile for Ktux osloader
 
+BINUTILS		= /home/ktux/ktux/build/bin
+
 STDDEPEND		= kloader.h Makefile
-BINUTILS		= /usr/cross/bin
 INCDIR			= ../include
 #LDSCRIPT		= loader.ld
-AS				= nasm
-CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -I$(INCDIR)
+AS				= /usr/bin/nasm
+#CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -I$(INCDIR)
+CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O1 -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
 LD				= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
 OBJDUMP			= ${BINUTILS}/i686-elf-objdump
 OBJCOPY			= ${BINUTILS}/i686-elf-objcopy
 NM				= ${BINUTILS}/i686-elf-nm
-LINKOPTS		= -m486 -Wl,-warn-common,-X,--oformat,elf32-i386,-e,kloaderMain,-Ttext,0x00008000
+LINKOPTS		= -march=i486 -Wl,-warn-common,-X,--oformat,elf32-i386,-e,kloaderMain,-Ttext,0x00008000
 BOOTSTUBOBJS	= klMain.o klConsoleIO.o klLoadKernel.o klHardware.o
 #HEADERS			= $(INCDIR)/interrupts.h $(INCDIR)/io.h $(INCDIR)/isr.h $(INCDIR)/ktux.h $(INCDIR)/stdio.h \
 #			$(INCDIR)/vga.h $(INCDIR)/video.h $(INCDIR)/keyboard.h $(INCDIR)/timer.h $(INCDIR)/pic.h
@@ -64,7 +66,7 @@ clean:
 # (These don't change, so just list files statically)
 ${BOOTSECT}: bootsect.s ${STDDEPEND}
 	${AS} -f bin -w+orphan-labels bootsect.s -l ${basename $@}.lst -o $@
-	unix2dos ${basename $@}.lst
+	#unix2dos ${basename $@}.lst
 
 # Kernel object target
 ${BOOTSTUBOBJ}: ${BOOTSTUBOBJS} ${STDDEPEND}
@@ -73,7 +75,7 @@ ${BOOTSTUBOBJ}: ${BOOTSTUBOBJS} ${STDDEPEND}
 # Kernel binary target
 ${BOOTSTUBBIN}: ${BOOTSTUBOBJ} ${STDDEPEND}
 	${OBJDUMP} --line-numbers --source ${BOOTSTUBOBJ} >${BOOTSTUBLST}
-	unix2dos ${BOOTSTUBLST}
+	#unix2dos ${BOOTSTUBLST}
 	${NM} --line-numbers ${BOOTSTUBOBJ} | sort >${BOOTSTUBSYM}
 	${OBJCOPY} -O binary ${BOOTSTUBOBJ} ${BOOTSTUBBIN}
 

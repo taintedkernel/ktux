@@ -36,7 +36,7 @@ static unsigned int *kernelHeapTable;
 static unsigned int *kernelPageTable = (unsigned int *) phys2Virt(P_PAGE_TABLE_KERNEL_1);
 static unsigned int *lower4MBPageTable = (unsigned int *) phys2Virt(P_PAGE_TABLE_FIRST_4MB);
 static unsigned int *kernelMappedTables;
-static unsigned char *kernelHeapEnd = (char *)V_KERNEL_HEAP_ADDR;
+static unsigned int *kernelHeapEnd = (unsigned int *)V_KERNEL_HEAP_ADDR;
 
 static unsigned int *freePageList = (void *)0;
 static unsigned int freePageListSize = 0;
@@ -370,7 +370,7 @@ void *kmalloc(unsigned int nbytes)
 		void *p = sbrk(nbytes);
 		if (p == (void *)-1)
 			return 0;
-		kernelHeapEnd = (char*)(p + nbytes);
+		kernelHeapEnd = (unsigned int *)(p + nbytes);
 		memsetd(p, 0, nbytes >> 2);
 		if (debug) kprintf("[dbg] kmalloc2(0x%X) return(0x%X) : heapEnd/Limit=0x%X/0x%X, freeBytes=%d\n", nbytes, p, kernelHeapEnd, vHeapMappedLimit, freeBytes);
 		return p;

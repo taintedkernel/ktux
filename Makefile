@@ -70,7 +70,7 @@ snapshot:
 	${SNAPSHOT}	${SNAPSHOTDIR} ${BACKUPDIR}
 
 ### Modify this according to your environment ###
-install: installcygwin
+install: installlinux
 ### Modify this according to your environment ###
 
 linux: installlinux

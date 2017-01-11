@@ -30,8 +30,8 @@ typedef struct {
 	ioPortNumber ioPortHigh;
 } ioPortRange;
 
-__inline__ void outportb(unsigned short port, char value);
-__inline__ void outportw(unsigned short port, short value);
-__inline__ unsigned char inportb(unsigned short port);
+void outportb(unsigned short port, char value);
+void outportw(unsigned short port, short value);
+unsigned char inportb(unsigned short port);
 
 #endif

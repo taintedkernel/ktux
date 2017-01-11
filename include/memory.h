@@ -178,6 +178,8 @@ unsigned int *create_new_table(unsigned int *pageDir, unsigned int virt);
 unsigned int alloc_page(void);
 unsigned int free_page(unsigned int);
 
+// static void dumpFreePageList(unsigned int start, unsigned int count);
+
 #endif
 
 

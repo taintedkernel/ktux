@@ -32,7 +32,7 @@ void *memsetd(void *dst, int val, size_t count)
 	return dst;
 }
 
-size_t strlen(const char *str)
+unsigned strlen(const char *str)
 {
 	size_t ret_val;
 

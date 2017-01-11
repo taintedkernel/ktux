@@ -24,11 +24,11 @@ STDDEPEND	= Makefile
 INCDIR		= ../include
 
 LDSCRIPT	= kernel.ld
-AS			= /usr/bin/nasm
 
-BINUTILS	= /usr/cross/bin
-CC			= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O1 -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
-CC_DEP		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O1 -nostdinc -fno-builtin -MM -I$(INCDIR) #-fwritable-strings
+BINUTILS	= /home/ktux/ktux/build/bin
+CC			= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -Wno-unused -W -O1 -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
+CC_DEP		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -Wno-unused -W -O1 -nostdinc -fno-builtin -MM -I$(INCDIR) #-fwritable-strings
+AS			= /usr/bin/nasm
 LD			= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
 OBJDUMP		= ${BINUTILS}/i686-elf-objdump
 #OBJCOPY	= ${BINUTILS}/i686-elf-objcopy
@@ -38,7 +38,7 @@ NM			= ${BINUTILS}/i686-elf-nm
 
 ### kernelInit MUST BE FIRST ###
 # For some reason ld doesn't follow the "entry" directive in my linker script #
-KERNELOBJS	= kernelInit.o kernel.o hardware.o interrupts.o io.o isr.o keyboard.o memory.o \
+KERNELOBJS	= kernelInit.o kernel.o io.o hardware.o interrupts.o isr.o keyboard.o memory.o \
 			paging.o pic.o process.o sh.o stdio.o string.o syscall.o tasks.o timer.o tss.o video.o
 
 HEADERS		= $(INCDIR)/_va_list.h $(INCDIR)/conio.h $(INCDIR)/error.h $(INCDIR)/hardware.h $(INCDIR)/interrupts.h \
@@ -74,7 +74,7 @@ clean:
 ${KERNELOBJ}: ${KERNELOBJS} ${LDSCRIPT} ${HEADERS} ${STDDEPEND}
 	$(LD) -o $@ $(KERNELOBJS)
 	${OBJDUMP} --line-numbers --source ${KERNELOBJ} >${KERNELLST}
-	/usr/bin/unix2dos ${KERNELLST}
+	#/usr/bin/unix2dos ${KERNELLST}
 	# This sed line is a bit of a hack
 	${NM} --line-numbers --debug-syms --numeric-sort ${KERNELOBJ} | sed "s|`pwd`|./kernel|g" >${KERNELSYM}
 

@@ -54,7 +54,7 @@ static unsigned int gamma;
 	return i;
 }*/
 
-volatile void thread_foo()
+void thread_foo()
 {
 	//DEBUG_BP
 	for (foo=0;;)
@@ -67,7 +67,7 @@ volatile void thread_foo()
 	}
 }
 
-volatile void thread_bar()
+void thread_bar()
 {
 	//nice(16);
 
@@ -83,7 +83,7 @@ volatile void thread_bar()
 	}
 }
 
-volatile void thread_gamma()
+void thread_gamma()
 {
 	nice(-63);			// we are important like the preccioussss
 

@@ -239,12 +239,12 @@ unsigned int create_kernel_thread(char *name, void (*eip)())
 
 // we limit modifying process priority to these two functions
 // check bounds here and should be safe
-inline volatile void nice(int newPriority)
+inline void nice(int newPriority)
 {
 	if ((-1*INT_PER_SLICE) < newPriority && newPriority < INT_PER_SLICE)
 		pCurrentTask->priority = newPriority;
 }
-inline volatile void p_nice(kernel_thread_t *thread, int newPriority)
+inline void p_nice(kernel_thread_t *thread, int newPriority)
 {
 	if ((-1*INT_PER_SLICE) < newPriority && newPriority < INT_PER_SLICE)
 		thread->priority = newPriority;

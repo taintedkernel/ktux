@@ -28,7 +28,7 @@
 int do_printf(const char *fmt, va_list args, fnptr_t fn, void *ptr)
 {
 	unsigned state, flags, radix, actual_wd, count, given_wd;
-	unsigned char *where, buf[PR_BUFLEN];
+	char *where, buf[PR_BUFLEN];
 	long num;
 
 	state = flags = count = given_wd = 0;
@@ -196,7 +196,7 @@ OK, I found my mistake. The math here is _always_ unsigned */
 			case 's':
 /* disallow pad-left-with-zeroes for %s */
 				flags &= ~PR_LZ;
-				where = va_arg(args, unsigned char *);
+				where = va_arg(args, char *);
 EMIT:
 				actual_wd = strlen(where);
 				if(flags & PR_WS)

@@ -31,6 +31,7 @@
 #include <interrupts.h>                 // reboot()
 #include <sh.h>							// processCommand()
 #include <string.h>						// memsetd()
+#include <process.h>					// ps()
 
 
 char scancode_to_ascii[0x100] = {
