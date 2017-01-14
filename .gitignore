@@ -1,0 +1,10 @@
+*.swp
+*.o
+*.lst
+*.sym
+*.dat
+*.elf
+ktuxldr
+ktuxkrnl
+a.img
+bochsout.txt
