@@ -68,6 +68,7 @@
 
 codeStart:
 	jmp	boot
+    nop
 
 fat12BPB:					; 00 - 02 jump instruction
 OEMName			db 'Ktux    '		; 03 - 0A OEM Name

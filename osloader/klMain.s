@@ -149,8 +149,10 @@ kloaderMain:
 	call	kloaderLoadKernel
 
 	; Check for error
-	cmp	ax, 0
-	jge	.loadOK
+	cmp	eax, ERR_LAST_ERROR
+	ja	    .loadOK
+	;cmp	ax, 0
+	;jge	.loadOK
 	push	ax
 	jmp	displayLoadError
 	add	sp, 0x02

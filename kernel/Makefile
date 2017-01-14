@@ -20,17 +20,23 @@
 
 # Makefile for Ktux kernel
 
+########## UPDATE THIS ##############
+BINUTILS	= /home/ktux/ktux/env/bin
+########## UPDATE THIS ##############
+
 STDDEPEND	= Makefile
 INCDIR		= ../include
 
 LDSCRIPT	= kernel.ld
 
-BINUTILS	= /home/ktux/ktux/build/bin
-CC			= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -Wno-unused -W -O1 -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
-CC_DEP		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -Wno-unused -W -O1 -nostdinc -fno-builtin -MM -I$(INCDIR) #-fwritable-strings
+# We have some definite bugs here, code is dependent upon optimizations disabled
+# Likely something in the assembly is broken.  But telling gcc to prioritize
+# debugging experience rather then size or speed makes our jobs much easier.
+CC			= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -Wno-unused -W -Og -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
+#CC_DEP		= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -Wno-unused -W -O0 -nostdinc -fno-builtin -MM -I$(INCDIR) #-fwritable-strings
 AS			= /usr/bin/nasm
 LD			= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
-OBJDUMP		= ${BINUTILS}/i686-elf-objdump
+OBJDUMP		= ${BINUTILS}/i686-elf-objdump -Mintel -EL
 #OBJCOPY	= ${BINUTILS}/i686-elf-objcopy
 NM			= ${BINUTILS}/i686-elf-nm
 

@@ -185,8 +185,11 @@ kloaderLoadKernel:
 	call	parseELFHeader
 
 	; Successful?
-	cmp	ax, 0
-	jge	.prepareKernel
+    ; Returns end of kernel marker (0xC000?000)
+    ; Error number start at 1 and go until ERR_LAST_ERROR (~dozen)
+    ; Check return code is greater then last error number
+	cmp	eax, ERR_LAST_ERROR
+	ja	.prepareKernel
 	push	eax								; Save parseELFHeader() error return code
 
 	; Update progress
@@ -214,8 +217,11 @@ kloaderLoadKernel:
 	call	prepareKernel
 
 	; Successful?
+    ; Testing/error message will not occur
+    ; prepareKernel does not return error code (always returns 0)
 	cmp	ax, 0
 	jge	.success
+
 	;push	ax								; Save parseELFHeader() error return code
 
 	; Update progress

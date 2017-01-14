@@ -20,16 +20,16 @@
 
 # Makefile for Ktux osloader
 
-BINUTILS		= /home/ktux/ktux/build/bin
+BINUTILS		= /home/ktux/ktux/env/bin
 
 STDDEPEND		= kloader.h Makefile
 INCDIR			= ../include
 #LDSCRIPT		= loader.ld
 AS				= /usr/bin/nasm
 #CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O2 -nostdinc -fno-builtin -fwritable-strings -I$(INCDIR)
-CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -O1 -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
+CC				= ${BINUTILS}/i686-elf-gcc -g -march=pentium -Wall -W -Og -nostdinc -fno-builtin -I$(INCDIR) #-fwritable-strings
 LD				= ${BINUTILS}/i686-elf-ld -g -T$(LDSCRIPT) -nostdlib
-OBJDUMP			= ${BINUTILS}/i686-elf-objdump
+OBJDUMP			= ${BINUTILS}/i686-elf-objdump -Mi8086,intel -EL
 OBJCOPY			= ${BINUTILS}/i686-elf-objcopy
 NM				= ${BINUTILS}/i686-elf-nm
 LINKOPTS		= -march=i486 -Wl,-warn-common,-X,--oformat,elf32-i386,-e,kloaderMain,-Ttext,0x00008000

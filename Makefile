@@ -78,21 +78,24 @@ cygwin: installcygwin
 
 
 installlinux:
-ifneq (${shell id -u},0)
-	@echo "Error: Makefile requires root privledges for install target"
-	@exit 1
-endif
+#ifneq (${shell id -u},0)
+#	@echo "Error: Makefile requires root privledges for install target"
+#endif
 	-rm ${SCRATCHIMG}
 	cp ${CLEANIMG} ${SCRATCHIMG}
-	-umount ${LOOPBACKDEV}
-	-losetup -d ${LOOPBACKDEV}
-	losetup ${LOOPBACKDEV} ${SCRATCHIMG}
-	mkfs.msdos ${LOOPBACKDEV}
-	mount ${LOOPBACKDEV} -o loop ${IMGMOUNTPT}
-	dd if=${BOOTSECT} bs=512 count=1 of=${LOOPBACKDEV}
-	cp ${BOOTSTUBBIN} ${IMGMOUNTPT}
-	cp ${KERNELBIN} ${IMGMOUNTPT}
-	umount ${LOOPBACKDEV}
+	@#dd if=/dev/zero of=${SCRATCHIMG} bs=1k count=1440
+	@#mkfs.msdos ${SCRATCHIMG}
+	@#-umount ${LOOPBACKDEV}
+	@#-losetup -d ${LOOPBACKDEV}
+	@#losetup ${LOOPBACKDEV} ${SCRATCHIMG}
+	@#mount ${LOOPBACKDEV} -o loop ${IMGMOUNTPT}
+	@#dd if=${BOOTSECT} bs=512 count=1 of=${LOOPBACKDEV}
+	@#cp ${BOOTSTUBBIN} ${IMGMOUNTPT}
+	@#cp ${KERNELBIN} ${IMGMOUNTPT}
+	@#umount ${LOOPBACKDEV}
+	dd if=${BOOTSECT} bs=512 count=1 conv=notrunc of=${SCRATCHIMG}
+	mcopy -i ${SCRATCHIMG} ${BOOTSTUBBIN} ::/
+	mcopy -i ${SCRATCHIMG} ${KERNELBIN} ::/ 
 
 installcygwin:
 	-${VFD} stop

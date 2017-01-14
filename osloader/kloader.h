@@ -31,16 +31,17 @@
 %define BOOL_TRUE						0
 %define BOOL_FALSE						1
 
-%define ERR_LOAD_ROOT					-1
-%define ERR_NO_FILE						-2
-%define ERR_LOAD_FAT					-3
-%define ERR_LOAD_KERNEL					-4
-%define ERR_INVALID_ELF					-5
-%define ERR_NOT_EXEC_ELF				-6
-%define ERR_NUM_SEGMENTS				-7
-%define ERR_SEGMENT_LAYOUT				-8
-%define ERR_SEGMENT_ALIGN				-9
-%define ERR_ALL_ALLOC					-10
+%define ERR_LOAD_ROOT					1
+%define ERR_NO_FILE						2
+%define ERR_LOAD_FAT					3
+%define ERR_LOAD_KERNEL					4
+%define ERR_INVALID_ELF					5
+%define ERR_NOT_EXEC_ELF				6
+%define ERR_NUM_SEGMENTS				7
+%define ERR_SEGMENT_LAYOUT				8
+%define ERR_SEGMENT_ALIGN				9
+%define ERR_ALL_ALLOC					10
+%define ERR_LAST_ERROR					10          ; Needs to be same as highest error number
 
 ;**********************************************
 
