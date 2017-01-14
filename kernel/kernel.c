@@ -40,66 +40,66 @@ systemInfo *thisSystem;
 // We come in with interrupts disabled
 void _kernel_main(void *bootParam)
 {
-	// First initialize RAM and enable paging
-	init_virt_mem(bootParam);
+    // First initialize RAM and enable paging
+    init_virt_mem(bootParam);
 
-	// After paging enabled, update pointers
-	thisSystem = virt2Phys(bootParam);
-	bootParam = NULL;			// NULL our old one
+    // After paging enabled, update pointers
+    thisSystem = virt2Phys(bootParam);
+    bootParam = NULL;           // NULL our old one
 
-	// Initialize console for stdout
-	init_console();
-	kprintf("initializing system:\nmemory ...\n");
+    // Initialize console for stdout
+    init_console();
+    kprintf("initializing system:\nmemory ...\n");
 
-	// Display memory info
-	print_mem_info(thisSystem);
-	kprintf("  [ OK ]\n");
+    // Display memory info
+    print_mem_info(thisSystem);
+    kprintf("  [ OK ]\n");
 
-	// Display video info
-	kprintf("video : ");
-	print_video_info();
-	kprintf("  [ OK ]\n");
+    // Display video info
+    kprintf("video : ");
+    print_video_info();
+    kprintf("  [ OK ]\n");
 
-	// Initialize interrupts
-	kprintf("interrupts ...\n");
-	init_interrupts();
-	kprintf("  [ OK ]\n");
+    // Initialize interrupts
+    kprintf("interrupts ...\n");
+    init_interrupts();
+    kprintf("  [ OK ]\n");
 
-	// Heap
-	kprintf("kernel heap ...\n");
-	init_heap();
-	kprintf("  [ OK ]\n");
+    // Heap
+    kprintf("kernel heap ...\n");
+    init_heap();
+    kprintf("  [ OK ]\n");
 
-	// Hardware
-	kprintf("hardware .");
-	init_pic();
-	kprintf(".");
-	init_timer();
-	kprintf(".");
-	init_keyboard();
-	kprintf("\n  [ OK ]\n");
+    // Hardware
+    kprintf("hardware .");
+    init_pic();
+    kprintf(".");
+    init_timer();
+    kprintf(".");
+    init_keyboard();
+    kprintf("\n  [ OK ]\n");
 
-	kprintf("scheduler ...\n");
-	init_multitasking();
-	kprintf("  [ OK ]\n");
+    kprintf("scheduler ...\n");
+    init_multitasking();
+    kprintf("  [ OK ]\n");
 
-	// Remap our PICs, set IRQ0 to 18Hz, enable only IRQs 0&1, and turn on interrupts
-	kprintf("Reprogramming timer and enabling IRQs...\n");
+    // Remap our PICs, set IRQ0 to 18Hz, enable only IRQs 0&1, and turn on interrupts
+    kprintf("Reprogramming timer and enabling IRQs...\n");
 
-	init_shell();
-	shell_prompt();
+    init_shell();
+    shell_prompt();
 
-	reprogram_timer(1000);
-	enable_irq(1);
-	start_scheduler();
-	sti();
+    reprogram_timer(1000);
+    enable_irq(1);
+    start_scheduler();
+    sti();
 
-	while(1) {
-		kill();
-		//DEBUG_BP
-		//asm volatile("int $0x20");
-	}
+    while(1) {
+        kill();
+        //DEBUG_BP
+        //asm volatile("int $0x20");
+    }
 
-	kprintf("kernel panic: exceution continuing beyond _kernel_main address space!");
-	while(1);		// one more final catch
+    kprintf("kernel panic: exceution continuing beyond _kernel_main address space!");
+    while(1);       // one more final catch
 }

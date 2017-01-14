@@ -21,7 +21,7 @@
 // sh.c - command prompt
 
 #include <ktux.h>
-#include <sh.h>			// this source
+#include <sh.h>         // this source
 #include <pic.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,24 +31,24 @@ int shellInitialized = false;
 
 void init_shell()
 {
-	shellInitialized = true;
+    shellInitialized = true;
 }
 
 void processCommand(char *command)
 {
-	if (!shellInitialized)
-		return;
+    if (!shellInitialized)
+        return;
 
-	if (strcmp(command, "timer") == 1)
-	{
-		toggle_irq(IRQ_TIMER);
-	}
+    if (strcmp(command, "timer") == 1)
+    {
+        toggle_irq(IRQ_TIMER);
+    }
 }
 
 void shell_prompt()
 {
-	if (!shellInitialized)
-		return;
+    if (!shellInitialized)
+        return;
 
-	kprintf("shell:~# ");
+    kprintf("shell:~# ");
 }

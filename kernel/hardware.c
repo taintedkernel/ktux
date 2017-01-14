@@ -25,8 +25,8 @@
 
 void displayCPUInfo(cpuInfo *cpu)
 {
-	kprintf("cpu info:\n");
-	kprintf("vendor id: %s\n", cpu->vendorString);
-	kprintf("model name: %s\n", cpu->extName);
-	kprintf("freq: %u\n", cpu->freq);
+    kprintf("cpu info:\n");
+    kprintf("vendor id: %s\n", cpu->vendorString);
+    kprintf("model name: %s\n", cpu->extName);
+    kprintf("freq: %u\n", cpu->freq);
 }
