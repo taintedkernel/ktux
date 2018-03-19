@@ -1,5 +1,7 @@
 Ktux - A 32-bit multitasking OS written in C and x86 assembly.
 
+![Screenshot](/src/screenshot2.png?raw=true "Screenshot")
+
 Description: Ktux is an open source operating system written for the
 Intel/AMD 80x86 architecture.  The goals for Ktux aim to provide the
 following main features:
